@@ -5,8 +5,21 @@
 > único: o esqueleto (issueops + correção) é estável e cada prova chega como
 > pasta do ano (`exams/<ano>/<track>/`), aplicada por overlay no dia da prova.
 > Material do docente (decisões, riscos, segredos, roteiros) vive no repo
-> privado **`endersonmenezes/teacher-escola-ti`**, pasta `_docente/` — nada
+> privado **`endersonmenezes/teacher-escola-ti`** (na raiz dele) — nada
 > aqui é sigiloso.
+
+## Sumário — quem é você?
+
+- 🧑‍🏫 **Novo professor da Escola de TI — ou quer copiar/replicar o projeto?**
+  Leia [O modelo](#o-modelo), [O ciclo de vida de uma prova](#o-ciclo-de-vida-de-uma-prova),
+  [Configuração](#configuração-uma-vez) e [Estrutura](#estrutura). Para criar
+  novas provas, veja o guia em [`docs/TRACKS.md`](docs/TRACKS.md). O material
+  do docente (decisões, riscos, roteiros de operação) está no repo privado
+  `endersonmenezes/teacher-escola-ti`.
+- 🎓 **Aluno querendo conhecer o projeto / testar como é o dia da prova?**
+  Vá direto para [Testar o ciclo completo (dummy)](#testar-o-ciclo-completo-dummy).
+- ⚖️ **Quer entender as regras da prova (nota, janela, fontes, zeramento)?**
+  Leia [`docs/REGRAS.md`](docs/REGRAS.md) e [Riscos conhecidos](#riscos-conhecidos-resumo).
 
 ## O modelo
 
@@ -46,15 +59,20 @@ Três camadas num único repositório **público**:
 
 ```mermaid
 flowchart TD
-    A["Semana anterior<br/>Aluno gera o repo a partir do template"] --> B["setup.yml roda sozinho<br/>ALUNO.md preenchido pela conta GitHub<br/>+ issue 🎯 Preparar entrega"]
+    A["Antes da prova (a qualquer momento)<br/>Aluno gera o repo a partir do template<br/>(pode treinar o ciclo com o dummy)"] --> B["setup.yml roda sozinho<br/>ALUNO.md preenchido pela conta GitHub<br/>+ issue 🎯 Preparar entrega"]
     B --> C["Aluno preenche RA e marca checkboxes<br/>preparar-entrega.yml valida e responde na issue"]
     D["Dia da prova<br/>Professor publica exams/&lt;ano&gt;/&lt;track&gt;/ na main do template"] --> E["aplicar-prova.yml<br/>gatilhos: schedule · push · comentário 'aplicar'"]
     E -->|"git fetch do template (público, sem PAT)"| F["Overlay: a track vira a raiz do repo<br/>README, contrato.json, rubrica.json,<br/>track.json, stubs, tests_publicos"]
     F --> G["Commit do bot = t0 da janela<br/>variante gerada por repo +<br/>issue 📝 Prova aplicada"]
     G --> H["Aluno desenvolve e dá push<br/>dentro da janela (divulgação:<br/>janela_minutos da rubrica)"]
     H --> I["auto-correcao.yml<br/>lockfile track.json liga os jobs"]
-    I --> J["Nota parcial no Summary<br/>(suíte escondida: correção<br/>manual do professor)"]
+    I --> J["Nota parcial no Summary<br/>(suíte escondida: correção<br/>fora do CI do aluno)"]
 ```
+
+No dia da prova real, o professor publica `exams/<ano>/<track>/` e **só a
+prova real é aplicada**: o dummy permanece publicado, mas com provas reais ao
+lado há várias candidatas — a aplicação trava até a seleção explícita via
+`/track` na issue, então o dummy não pode ser aplicado por engano.
 
 - **Janela auto-ancorada**: a trampa T4 mede a janela a partir do commit
   "aplicar prova" + `janela_minutos` da rubrica — enforcement e divulgação
@@ -67,6 +85,11 @@ flowchart TD
 
 ## Configuração (uma vez)
 
+> [!NOTE]
+> Esta configuração é responsabilidade do **professor da disciplina** (dono do
+> template e dos repos de aluno/organização). O aluno não configura nada —
+> gera o repo a partir do template e segue o fluxo.
+
 O fluxo do aluno precisa **apenas do `GITHUB_TOKEN` padrão** (o template é
 público — fetch do template, overlay, issues e nota parcial funcionam sem
 nenhuma configuração extra).
@@ -78,42 +101,54 @@ nenhuma configuração extra).
 | Repo → Settings → Secrets/Vars | `CORRECAO_REPO` — repo da suíte escondida | **opcional** — ver abaixo |
 
 > [!NOTE]
-> **A suíte escondida NÃO roda no CI — por decisão do professor**, a correção
-> da suíte escondida é **executada manualmente** (o professor baixa os
-> repositórios dos alunos e roda a correção fora do CI). Por isso o job de
-> testes escondidos faz **skip por design** quando `CORRECAO_TOKEN`/
-> `CORRECAO_REPO` não estão configurados — isso **não é erro**.
+> **A suíte escondida NÃO roda no CI do repo do aluno.** A correção dela acontece
+> em um dos dois modos, a critério do professor:
 >
-> Consequência: a nota exibida no Summary do CI é **parcial** (testes
-> públicos + checagens de entrega/trampas). A **nota definitiva** inclui a
-> suíte escondida e é apurada pelo professor na correção manual.
+> - **Manual** — o professor baixa os repositórios dos alunos e executa a
+>   correção fora do CI; ou
+> - **Actions do repo teacher** — um sistema que roda no GitHub Actions do repo
+>   privado `endersonmenezes/teacher-escola-ti`, do qual apenas a cópia ou o
+>   relatório do resultado é disponibilizado aos alunos.
+>
+> Em ambos os modos vale a mesma transparência: os alunos têm como **verificar
+> a data de criação dos testes** — a suíte existe **antes** da prova, então não
+> há ajuste retroativo dos testes olhando as entregas. Já o conteúdo completo da
+> suíte **não é publicado** (não entregamos todo o ouro).
+>
+> Por isso o job de testes escondidos faz **skip por design** quando
+> `CORRECAO_TOKEN`/`CORRECAO_REPO` não estão configurados — isso **não é erro**.
+> E a nota exibida no Summary do CI é **parcial** (testes públicos + checagens
+> de entrega/trampas): a **nota definitiva** inclui a suíte escondida, apurada
+> fora do CI do aluno.
 
 ## Testar o ciclo completo (dummy)
 
+> 🎓 **Quer ver como funciona antes da prova?** Gere o seu repo a partir do
+> template e siga o ciclo: quando o dummy for a única prova publicada, ele é
+> aplicado automaticamente; quando houver provas reais publicadas, selecione
+> com `/track dummy-exam` na issue "🎯 Preparar entrega".
+
 O `exams/dummy-exam/` é uma prova de teste de primeira classe **e permanente**:
-serve para validar o sistema e treinar o ciclo de entrega (aula teste) em
-qualquer ano, publicada na `main` o tempo todo, fora da hierarquia de ano.
+serve para validar o sistema e treinar o ciclo de entrega em qualquer ano,
+publicada na `main` o tempo todo, fora da hierarquia de ano.
 
 **Seleção:** candidatas são o dummy + as tracks do ano vigente. Com apenas o
 dummy publicado, a aplicação dele é **implícita** (cenário de teste). Com
-provas reais publicadas ao lado, a aplicação **trava de propósito** até o
-`/track` na issue — `/track dummy-exam` escolhe a prova-teste.
+provas reais publicadas ao lado (várias candidatas), a aplicação **trava de
+propósito** até o `/track` na issue — `/track dummy-exam` escolhe a
+prova-teste. Assim o dummy nunca é aplicado por engano no dia de uma prova
+real.
 
-**Cenário A — você está em `endersonmenezes/` (dono do template):**
+**Teste A — professor/dono do template (você está em `endersonmenezes/`):**
 1. Crie um repo de teste: `gh repo create prova-teste-meu-login --template endersonmenezes/exam-escola-ti --private` (ou o botão "Use this template").
 2. O `setup.yml` roda sozinho: `ALUNO.md` + issue "🎯 Preparar entrega". Complete o RA, marque os checkboxes — *Preparar entrega* responde na issue.
 3. Comente "aplicar" na issue (ou aguarde o polling de 10 min): o *Aplicar prova* faz o overlay do dummy — `contrato.json` na raiz, README novo, `tests/public/` —, commita (t0 da janela) e abre a issue "📝 Prova aplicada" com a sua variante.
 4. Implemente algo em `src/` + `Dockerfile`, dê push — *Auto-correção* roda com a janela ancorada e a nota sai no Summary.
 
-Com múltiplas candidatas publicadas (varias tracks do ano vigente, ou tracks
-reais + dummy), a seleção é obrigatória: o aluno comenta `/track <nome>` na
-issue "🎯 Preparar entrega" antes da aplicação — `/track dummy-exam` escolhe a
-prova-teste.
-
-**Cenário B — você tem um fork e quer provar o sistema de ponta a ponta:**
+**Teste B — professor com fork (provar o sistema de ponta a ponta):**
 1. Fork deste repo e registre a var `TEMPLATE_URL` apontando para **o seu fork**
    (Settings → Secrets and variables → Actions → Variables).
-2. Em um repo gerado a partir do **seu fork**, siga os passos 2–4 do Cenário A.
+2. Em um repo gerado a partir do **seu fork**, siga os passos 2–4 do Teste A.
 3. O overlay vai puxar a pasta do ano da **sua** `main` — publique
    `exams/<ano>/<track>/` lá quando quiser simular o dia da prova, e observe o
    `aplicar-prova` disparar sozinho (ou force com "aplicar" na issue).
@@ -125,8 +160,8 @@ prova-teste.
   da prova.
 - Aluno com `git fetch` manual no template antes da hora descobre, no máximo,
   os próprios parâmetros — impacto baixo por desenho.
-- Detalhes completos, segredos e roteiros: **`teacher-escola-ti/_docente/`**
-  (repo privado do professor).
+- Detalhes completos, segredos e roteiros: repo privado do professor,
+  **`endersonmenezes/teacher-escola-ti`** (material do docente na raiz dele).
 
 ## Estrutura
 
@@ -158,8 +193,6 @@ prova-teste.
 │   └── AVISO-DUMMY.md    aviso interno (não vai para o repo do aluno)
 ├── exams/<ano>/<track>/  prova de um ano (só na main durante a aplicação)
 ├── tests/public/         placeholder — os testes chegam com a aplicação
-├── _docente/             (gitignored) material do professor — vive no repo
-│                         privado teacher-escola-ti
 ├── .gitignore
 └── FONTES.md             declaração de consultas do aluno
 ```
