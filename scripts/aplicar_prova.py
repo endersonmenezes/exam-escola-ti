@@ -220,8 +220,16 @@ def main():
     # 7) comentario na issue UNICA da prova (nada de issue nova)
     if TOKEN and REPO_FULL:
         n_issue = prova_issue.numero()
-        params = "\n".join("- `%s` = %s" % (k, val) for k, val in v.items()
-                           if k not in ("slug", "EXAM_DIR"))
+        DESCRICOES = {
+            "PREFIXO": "nome que a suíte envia em `/saudar` (o `nome` da sua saudação)",
+            "RAZAO_PREFERENCIAL": "valor de `repeticoes` usado no teste da sua variante",
+            "PORTA_API": "porta em que a suíte sobe SEU container (mapeada para 8080 dentro dele)",
+            "EXAM_DIR": "pasta da prova aplicada",
+        }
+        params = "\n".join(
+            "- `%s` = %s — %s" % (k, val, DESCRICOES[k]) if k in DESCRICOES
+            else "- `%s` = %s" % (k, val)
+            for k, val in v.items() if k != "slug")
         corpo = ("## ✅ Prova aplicada neste repositorio\n\n"
                  "Pasta: `%s` — a janela da prova é de **%d minutos**, "
                  "contados a partir do commit de aplicacao. O relogio ja esta "

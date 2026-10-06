@@ -35,6 +35,33 @@ repositório, então copiar de colega não funciona.
   comentário na issue "🎯 Prova"** (a nota é atualizada no mesmo comentário)
 - **Regras e rastreabilidade**: `docs/REGRAS.md` e `FONTES.md`
 
+## Parâmetros da sua variante
+
+Cada repositório tem a sua — derivados do **nome do repo**, então copiar de
+colega não funciona. O comentário de aplicação na issue "🎯 Prova" lista os
+seus valores; no `variante/params.json` eles aparecem assim:
+
+| Parâmetro | O que a suíte faz com ele |
+| --- | --- |
+| `PREFIXO` | O **nome** que a suíte envia em `/saudar?nome=...` — sua saudação tem que sair com ele |
+| `RAZAO_PREFERENCIAL` | O valor de `repeticoes` no teste da sua variante — quantas linhas a suíte espera |
+| `PORTA_API` | A porta em que a suíte sobe **o seu container** (`docker run -p PORTA_API:8080`) |
+| `EXAM_DIR` | A pasta da prova que foi aplicada no seu repo |
+
+## Como este repo está organizado
+
+| Caminho | Papel |
+| --- | --- |
+| `src/` | **Sua solução** — é aqui que você implementa |
+| `Dockerfile` | Como a suíte sobe o seu código em container |
+| `tests/public/` | O que o CI roda a cada push (veio da pasta da prova) |
+| `contrato.json` / `rubrica.json` | O contrato da prova e como ela vale |
+| `variante/` | Os seus parâmetros |
+| `FONTES.md` | Sua declaração de consultas (rastreabilidade) |
+| `ALUNO.md` | Sua identidade (nome/RA) |
+| `scripts/`, `.github/`, `docs/` | **Esqueleto do sistema — NÃO altere** (tamper-check zera a prova) |
+| `teacher.json` | Gerado automaticamente quando você fecha a issue (entrega) |
+
 ## Regras da prova-teste
 
 - **Janela**: 120 minutos (1h30), contados a partir do commit de aplicação

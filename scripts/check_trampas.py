@@ -28,6 +28,7 @@ PROTECTED = ["scripts", ".github", "docs"]
 REPO = os.environ.get("REPO_SLUG") or os.path.basename(BASE)
 
 alerts, fatal = [], []
+login_aluno = ""
 
 
 def sh(*args):
@@ -78,6 +79,10 @@ else:
         alerts.append("ALUNO.md sem RA valido (5+ digitos).")
     else:
         ra = m.group(1)
+    m_login = re.search(r"Conta GitHub\s*[:：]?\s*@?([A-Za-z0-9](?:[A-Za-z0-9-]{0,38}))",
+                        texto)
+    if m_login:
+        login_aluno = m_login.group(1).lower()
     if "PREENCHER" in texto:
         alerts.append("ALUNO.md ainda com placeholder de RA.")
     if not re.search(r"nome\s*[:：]", texto, re.IGNORECASE):
@@ -103,8 +108,12 @@ else:
     autores = {(l.split("|")[0], l.split("|")[1]) for l in commits}
     if len(autores) > 2:
         alerts.append("%d autores diferentes no historico (ignorando bots) — revisar." % len(autores))
-    if ra and not any(ra in email or ra in nome.replace(" ", "") for nome, email in autores):
-        alerts.append("RA de ALUNO.md nao aparece em nenhum autor de commit — revisar identidade.")
+    if login_aluno:
+        locais = {email.split("@")[0].lower() for _, email in autores}
+        if login_aluno not in locais:
+            alerts.append("Conta GitHub de ALUNO.md (@%s) nao bate com o "
+                          "local-part de nenhum e-mail de autor — revisar "
+                          "identidade." % login_aluno)
 
 # ---- Rastreabilidade: FONTES.md ----
 obs_fontes = []
@@ -171,12 +180,19 @@ def norm(t):
     return (t + ":00")[:19]
 
 
+pre_aplicacao = []
 if ini and fim:
     ini, fim = norm(ini), norm(fim)
-    fora = [l for l in commits if not (ini <= l.split("|")[2] <= fim)]
-    if fora:
-        alerts.append("%d commit(s) do aluno FORA da janela (%s..%s) — revisar."
-                      % (len(fora), ini, fim))
+    # janela pega so quem PASSOU do fim; commits ANTES do t0 sao fase de
+    # preparacao (preencher RA, FONTES.md, selecionar track) — informativo
+    tardios = [l for l in commits if l.split("|")[2] > fim]
+    pre_aplicacao = [l for l in commits if l.split("|")[2] < ini]
+    if tardios:
+        alerts.append("%d commit(s) do aluno DEPOIS do fim da janela (%s) — revisar."
+                      % (len(tardios), fim))
+    if pre_aplicacao:
+        obs_fontes.append("%d commit(s) do aluno ANTES da aplicacao (fase de "
+                          "preparacao) — informativo." % len(pre_aplicacao))
 else:
     obs_fontes.append("Janela indisponivel (sem aplicacao nem dispatch manual) — T4 desarmado.")
 
@@ -207,11 +223,13 @@ if token and tpl:
                 fatal.append("Tamper detectado em '%s': %d arquivo(s) alterado(s): %s — prova zerada."
                              % (rel, len(diffs), ", ".join(sorted(diffs)[:5])))
 else:
-    alerts.append("CORRECAO_TOKEN/TEMPLATE_REPO ausentes — tamper-check remoto (T3) NAO executado.")
+    # informacao de configuracao, NAO suspeita — vai para obs, nao para alerts
+    obs_fontes.append("CORRECAO_TOKEN/TEMPLATE_REPO ausentes — tamper-check remoto (T3) NAO executado.")
 
 # ---- saida ----
 resultado = {"job": "trampas", "repo": REPO, "commits": len(commits),
              "commits_bot": commits_bot,
+             "commits_pre_aplicacao": len(pre_aplicacao),
              "alerts": alerts, "fatal": fatal, "obs": obs_fontes}
 with open(os.path.join(BASE, "result-trampas.json"), "w", encoding="utf-8") as f:
     json.dump(resultado, f, ensure_ascii=False, indent=2)

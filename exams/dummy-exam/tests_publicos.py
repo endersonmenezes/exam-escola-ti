@@ -28,12 +28,13 @@ SLUG = os.environ.get("REPO_SLUG", slug_do_repo())
 V = variante(SLUG)
 BASE = os.environ.get("BASE_URL", "http://localhost:%d" % V["PORTA_API"])
 
-# Parametros completos da variante: mesmo mecanismo de scripts/variante.py
-# (sha256 do slug, indice = hash % len(tabela)) aplicado as tabelas extras.
+# Parametros da variante: NOME e REPETICOES vêm direto de variante() (a mesma
+# funcao que a aplicacao usou — anunciada == testada); o hash próprio só
+# cobre as tabelas EXTRAS (SAUDACOES/SUFIXOS), que variante() não retorna.
 _TABELAS = parametros_ano(pasta_do_ano())
 _H = int(hashlib.sha256(SLUG.encode("utf-8")).hexdigest(), 16)
-NOME = _TABELAS["PREFIXOS"][_H % len(_TABELAS["PREFIXOS"])]
-REPETICOES = _TABELAS["RAZOES"][_H % len(_TABELAS["RAZOES"])]
+NOME = V["PREFIXO"]
+REPETICOES = V["RAZAO_PREFERENCIAL"]
 SAUDACAO = _TABELAS["SAUDACOES"][_H % len(_TABELAS["SAUDACOES"])]
 SUFIXO = _TABELAS["SUFIXOS"][_H % len(_TABELAS["SUFIXOS"])]
 

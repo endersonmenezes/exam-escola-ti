@@ -14,6 +14,13 @@ overlay na aplicacao), a ISSUE UNICA da prova ("🎯 Prova", numero gravado em
 certa) e o comentario de boas-vindas LISTANDO as provas disponiveis
 (candidatas via scripts/selecao.py — fetch no template, publico sem PAT).
 
+Idempotencia de RECURSO (v3.3): a geracao do repo dispara DOIS pushes quase
+simultaneos -> dois runs de setup em PARALELO (a sentinela local nao basta —
+TOCTOU; ambos leem antes de qualquer um escrever e criam uma issue cada).
+Por isso, antes de criar, o setup ADOTA a issue aberta "🎯 Prova" se existir;
+depois de criar/adotar, RECONCILIA: fecha as duplicatas abertas com um
+comentario apontando para a mantida (menor numero, deterministico).
+
 DRY_RUN=1 executa localmente sem API/push (para teste).
 """
 import json
@@ -99,6 +106,17 @@ def comentario_boas_vindas(numero_issue, candidatas):
     return "\n".join(linhas)
 
 
+def issues_prova_abertas():
+    """Issues ABERTAS com titulo exato "🎯 Prova" (idempotencia de recurso)."""
+    if not (TOKEN and REPO_FULL):
+        return []
+    status, dados = api("GET", "/repos/%s/issues?state=open&per_page=50"
+                        % REPO_FULL)
+    if status == 200 and isinstance(dados, list):
+        return [i for i in dados if i.get("title") == "🎯 Prova"]
+    return []
+
+
 def main():
     if os.environ.get("REPO_FULL", "") == "endersonmenezes/exam-escola-ti":
         print("Repositorio-template — nao e uma prova; no-op.")
@@ -124,14 +142,22 @@ def main():
         print("Template indisponivel (%s) — listando so o dummy." % TEMPLATE_URL)
 
     # 3) ISSUE UNICA da prova — criada ANTES do commit para o lock
-    #    .prova/issue entrar no mesmo commit do bot.
+    #    .prova/issue entrar no mesmo commit do bot. Idempotencia de RECURSO:
+    #    se uma "🎯 Prova" aberta ja existe (corrida de dois setups em
+    #    paralelo), ADOTA em vez de criar; depois reconcilia as duplicatas.
     numero_issue = None
     if DRY_RUN or not TOKEN:
         print("DRY_RUN — issue nao criada.")
     else:
-        api("POST", "/repos/%s/labels" % REPO_FULL,
-            {"name": "prova", "color": "1d76db", "description": "Issue oficial da prova"})
-        corpo = """## Checklist do aluno
+        existentes = issues_prova_abertas()
+        if existentes:
+            mantida = sorted(existentes, key=lambda i: i["number"])[0]
+            numero_issue = mantida["number"]
+            print("Issue #%d adotada (ja existente)." % numero_issue)
+        else:
+            api("POST", "/repos/%s/labels" % REPO_FULL,
+                {"name": "prova", "color": "1d76db", "description": "Issue oficial da prova"})
+            corpo = """## Checklist do aluno
 
 - [ ] Meu `ALUNO.md` esta com **Nome e RA** corretos (o bot preencheu o nome pela sua conta GitHub — confira!)
 - [ ] Li as [regras comuns](docs/REGRAS.md) e sei o que precisa declarar em `FONTES.md`
@@ -144,17 +170,29 @@ Comente `/track <nome-da-pasta>` **nesta issue** para escolher qual prova aplica
 
 Ao marcar as caixas (ou comentar), o workflow **Preparar entrega** valida e responde aqui. A prova se encerra quando **voce fechar esta issue** — nesse momento o sistema gera o `teacher.json` de entrega. Duvidas? Comente aqui.
 """
-        status, issue = api("POST", "/repos/%s/issues" % REPO_FULL,
-                            {"title": "🎯 Prova", "body": corpo,
-                             "labels": ["prova"]})
-        if status == 201:
-            numero_issue = issue["number"]
+            status, issue = api("POST", "/repos/%s/issues" % REPO_FULL,
+                                {"title": "🎯 Prova", "body": corpo,
+                                 "labels": ["prova"]})
+            if status == 201:
+                numero_issue = issue["number"]
+                print("Issue #%d criada." % numero_issue)
+            else:
+                print("Falha ao criar issue (status %d)." % status)
+        if numero_issue:
             with open(os.path.join(BASE, ".prova", "issue"), "w",
                       encoding="utf-8") as f:
                 f.write("%d\n" % numero_issue)
-            print("Issue #%d criada (lock .prova/issue)." % numero_issue)
-        else:
-            print("Falha ao criar issue (status %d)." % status)
+            # reconciliacao: fecha duplicatas abertas apontando para a mantida
+            for dup in issues_prova_abertas():
+                if dup["number"] != numero_issue:
+                    api("POST", "/repos/%s/issues/%s/comments"
+                        % (REPO_FULL, dup["number"]),
+                        {"body": "Issue duplicada do setup automatico — "
+                                 "acompanhe a #%d." % numero_issue})
+                    api("PATCH", "/repos/%s/issues/%s" % (REPO_FULL, dup["number"]),
+                        {"state": "closed"})
+                    print("Issue duplicada #%d fechada (mantida #%d)."
+                          % (dup["number"], numero_issue))
 
     # 4) ALUNO.md pre-preenchido com a conta do dono do repo + botao da issue
     login = os.environ.get("REPO_OWNER_LOGIN", "")

@@ -146,36 +146,36 @@ def main():
             print("ISSUE_NUMBER invalido (%s) — no-op." % NUMERO)
             return
 
-    ok = []
+    identidade, prova = [], []
 
     # 0) Selecao de track (issueops): feedback imediato + aplicacao em cadeia
     escolhida = selecionar_track(lock)
     if escolhida:
-        ok.append("✅ track `%s` gravada em `.prova/track` — a aplicação foi "
-                  "disparada (acompanhe por aqui)." % escolhida)
+        prova.append("✅ track `%s` gravada em `.prova/track` — a aplicação foi "
+                     "disparada (acompanhe por aqui)." % escolhida)
 
-    # 1) ALUNO.md com RA
+    # 1) ALUNO.md com RA — Fase 1 (Identidade)
     aluno_path = os.path.join(BASE, "ALUNO.md")
     if not os.path.exists(aluno_path):
-        ok.append("❌ `ALUNO.md` ausente — algo falhou no setup; comente aqui para o professor ver.")
+        identidade.append("❌ `ALUNO.md` ausente — algo falhou no setup; comente aqui para o professor ver.")
     else:
         texto = open(aluno_path, encoding="utf-8", errors="replace").read()
         if re.search(r"RA\s*[:：]?\s*[0-9]{5,}", texto) and "PREENCHER" not in texto:
-            ok.append("✅ `ALUNO.md` com RA válido")
+            identidade.append("✅ `ALUNO.md` com RA válido")
         else:
-            ok.append("❌ `ALUNO.md` sem RA válido — preencha e commite.")
+            identidade.append("❌ `ALUNO.md` sem RA válido — preencha e commite.")
 
-    # 2) identidade
+    # 2) identidade canonica — Fase 1
     id_path = os.path.join(BASE, ".prova", "id")
     if os.path.exists(id_path) and open(id_path, encoding="utf-8").read().strip() == REPO:
-        ok.append("✅ identidade da prova confere com o repositório")
+        identidade.append("✅ identidade da prova confere com o repositório")
     else:
-        ok.append("❌ `.prova/id` ausente ou divergente — rode `python scripts/variante.py`.")
+        identidade.append("❌ `.prova/id` ausente ou divergente — rode `python scripts/variante.py`.")
 
-    # 3) FONTES.md presente E editado em relacao ao template
-    ok.append(checar_fontes())
+    # 3) FONTES.md presente E editado em relacao ao template — Fase 2
+    prova.append(checar_fontes())
 
-    # 4) variante (só depois da aplicação)
+    # 4) variante (só depois da aplicação) — Fase 2
     pasta = pasta_do_ano(BASE)
     if pasta:
         esperado = variante(REPO)
@@ -183,22 +183,34 @@ def main():
         if os.path.exists(params_path):
             gravado = json.load(open(params_path, encoding="utf-8"))
             diffs = [k for k in esperado if gravado.get(k) != esperado[k]]
-            ok.append("✅ variante coerente (pasta `%s`)" % pasta if not diffs
-                      else "❌ `variante/params.json` diverge em: %s" % ", ".join(diffs))
+            prova.append("✅ variante coerente (pasta `%s`)" % pasta if not diffs
+                         else "❌ `variante/params.json` diverge em: %s" % ", ".join(diffs))
         else:
-            ok.append("❌ `variante/params.json` ausente — rode `python scripts/variante.py`.")
+            prova.append("❌ `variante/params.json` ausente — rode `python scripts/variante.py`.")
     else:
-        ok.append("⏳ prova ainda não aplicada — a variante será validada na aplicação")
+        prova.append("⏳ prova ainda não aplicada — a variante será validada na aplicação")
 
-    faltam = [l for l in ok if l.startswith("❌")]
+    todas = identidade + prova
+    faltam = [l for l in todas if l.startswith("❌")]
     if faltam:
-        corpo = ("🔎 **Preparação incompleta**:\n\n" + "\n".join(ok)
-                 + "\n\nResolva os ❌ e marque os checkboxes de novo; eu revalido. 💪")
+        corpo = ("🔎 **Preparação incompleta**\n\n"
+                 "### Fase 1 — Identidade\n\n" + "\n".join(identidade) +
+                 "\n\n### Fase 2 — Prova\n\n" + "\n".join(prova) +
+                 "\n\nResolva os ❌ e marque os checkboxes de novo; eu revalido. 💪")
     else:
-        corpo = ("✅ **Preparação em dia!**\n\n" + "\n".join(ok)
-                 + "\n\nQuando a prova for aplicada (commit *aplicar prova*), a "
-                   "janela definida na rubrica começa a contar. Para escolher a "
-                   "track, comente `/track <nome>` aqui. Boa prova! 🚀")
+        if pasta:
+            proximo = ("Desenvolva e dê push dentro da janela; **feche esta issue "
+                       "ao final** — o sistema gera o `teacher.json` de entrega.")
+        elif escolhida:
+            proximo = ("Sua seleção foi registrada — a prova será aplicada em "
+                       "instantes (acompanhe por aqui).")
+        else:
+            proximo = ("Selecione sua prova comentando `/track <nome>` aqui (a "
+                       "lista está no comentário de boas-vindas).")
+        corpo = ("✅ **Preparação em dia!**\n\n"
+                 "### Fase 1 — Identidade\n\n" + "\n".join(identidade) +
+                 "\n\n### Fase 2 — Prova\n\n" + "\n".join(prova) +
+                 "\n\n### Próximo passo\n\n" + proximo + "\n\nBoa prova! 🚀")
 
     prova_issue.comentar(corpo)
     print("Respondido na issue #%s (%s)." % (lock, "ok" if not faltam else "pendencias"))

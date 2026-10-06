@@ -11,18 +11,21 @@ if ! command -v docker >/dev/null 2>&1; then
 fi
 
 python3 scripts/variante.py >/dev/null
-PORTA=$(python3 -c "import json;print(json.load(open('variante/params.json'))['PORTA_API'])")
+# PORTA_API vem da variante do repo (fallback 9201 — mesmo default do sistema)
+PORTA=$(python3 -c "import json,os;p='variante/params.json';print(json.load(open(p)).get('PORTA_API',9201) if os.path.exists(p) else 9201)")
 SLUG=$(python3 -c "import json;print(json.load(open('variante/params.json'))['slug'])")
-IMAGEM="prova-$(echo "$SLUG" | tr '[:upper:]' '[:lower:]' | tr -c 'a-z0-9' '-')"
+# printf '%s' (sem \n do echo): evita trailing '-' invalido na tag do docker
+SUF=$(printf '%s' "$SLUG" | tr '[:upper:]' '[:lower:]' | tr -c 'a-z0-9' '-' | sed 's/-*$//')
+IMAGEM="prova-$SUF"
 
 echo "==> build $IMAGEM"
 docker build -q -t "$IMAGEM" .
 
 echo "==> subindo em localhost:$PORTA"
-docker rm -f prova-teste >/dev/null 2>&1 || true
-docker run -d --name prova-teste -p "$PORTA:8080" "$IMAGEM" >/dev/null
+docker rm -f "prova-teste-$SUF" >/dev/null 2>&1 || true
+docker run -d --name "prova-teste-$SUF" -p "$PORTA:8080" "$IMAGEM" >/dev/null
 
-cleanup() { docker rm -f prova-teste >/dev/null 2>&1 || true; }
+cleanup() { docker rm -f "prova-teste-$SUF" >/dev/null 2>&1 || true; }
 trap cleanup EXIT
 
 echo "==> aguardando /healthz"
@@ -32,7 +35,7 @@ for i in $(seq 1 40); do
   fi
   if [ "$i" = "40" ]; then
     echo "ERRO: API nao respondeu /healthz a tempo. Logs:" >&2
-    docker logs prova-teste >&2 || true
+    docker logs "prova-teste-$SUF" >&2 || true
     exit 1
   fi
   sleep 2
