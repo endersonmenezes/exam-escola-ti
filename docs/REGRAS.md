@@ -9,8 +9,13 @@
 
 ## Nota
 
-- Prova vale **0–100**, soma dos critérios publicados na pasta do ano
-  (`rubrica.json`), arredondamento **0,5 para cima**.
+- Prova vale **0–100** (`nota_max`), soma dos critérios publicados na pasta do
+  ano (`rubrica.json`). Quando a rubrica define `extras_max`, a nota pode
+  **ultrapassar 100** até o teto `nota_max + extras_max`.
+- **A nota exibida no CI é parcial** — testes públicos + checagens (trampas e
+  entrega). A nota definitiva inclui a **suíte escondida**, executada
+  **manualmente pelo professor fora do CI** (o job de testes escondidos pula
+  por design quando o repo de correção não está configurado — não é erro).
 - Critérios objetivos: dúvida de correção se resolve **reexecutando o
   workflow**, não por negociação.
 

@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Variante do aluno — genérica, lê os parâmetros da pasta do ano.
 
-A variante é DETERMINÍSTICA: derivada do nome do repositório + da tabela de
-parâmetros do ano (`<ano>/<prova>/params.json`). A correção recompute os
-mesmos valores, então copiar arquivos de colega não funciona.
+A variante é DETERMINÍSTICA: derivada do nome do repositório + das tabelas da
+seção `variante` do `contrato.json` da pasta do ano (`exams/<ano>/<track>/`).
+A correção recompute os mesmos valores, então copiar arquivos de colega não
+funciona.
 
 Antes da prova ser aplicada não existe pasta do ano — variante() lança erro
 nesse caso (setup da prova não depende de variante; só a aplicação e a
@@ -31,7 +32,7 @@ def pasta_do_ano(base: str = BASE):
     """Localiza a pasta da prova aplicada (marcador .prova/exam-dir).
 
     Depois do overlay, o contrato vive na RAIZ do repo; o marcador guarda de
-    onde veio (ex.: exams/2026/dummy-exam). None se a prova nao foi aplicada.
+    onde veio (ex.: exams/dummy-exam). None se a prova nao foi aplicada.
     """
     marcador = os.path.join(base, ".prova", "exam-dir")
     if os.path.exists(marcador):

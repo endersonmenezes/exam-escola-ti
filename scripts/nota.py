@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """Agrega os resultados dos jobs em nota.json e no GitHub Step Summary.
 
-Le o teto de pontos (`nota_max`) da rubrica da pasta do ano, quando aplicada.
+Le o teto de pontos (`nota_max` + `extras_max`) da rubrica da pasta do ano,
+quando aplicada.
 
 Uso (job de nota, artefatos baixados em ./resultados):
-    python scripts/nota.py
+    python scripts/nota.py            # ou, explicitamente:
+    python scripts/nota.py resultados
 """
 import glob
 import json

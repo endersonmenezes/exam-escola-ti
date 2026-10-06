@@ -46,8 +46,8 @@ estilos de prova) sem disparar o que não serve para a track atual.
     "publicos":  { "path": "tests/public", "runner": "scripts/rodar_testes.sh" },
     "escondidos": { "via": "CORRECAO_REPO" }
   },
-  "recursos": {                      // opcional — declara capacidades da track
-    "frontend": true,
+  "recursos": {                      // obrigatório, dict[str, bool] — declara capacidades da track
+    "frontend": false,
     "docker": true,
     "variante": true
   }
@@ -58,7 +58,7 @@ estilos de prova) sem disparar o que não serve para a track atual.
 
 | Chave | Job | Desliga quando a track… |
 | --- | --- | --- |
-| `auto-correcao.trampas` | `trampas` | **incondicional no workflow** (só a `aplicada` o liga) — não é editável pela track |
+| `auto-correcao.trampas` | `trampas` | — (mantenha `true`; é o anti-cola e o gate da janela) |
 | `auto-correcao.estrutura` | `estrutura` | não tiver Dockerfile/README como entrega |
 | `auto-correcao.testes-publicos` | `testes-publicos` | não tiver suíte pública (ex.: prova de debugging) |
 | `auto-correcao.testes-escondidos` | `testes-escondidos` | não tiver suíte escondida |
@@ -82,11 +82,16 @@ O job `config` do workflow *Auto-correção* usa exatamente esses `get` para
 preencher seus `outputs`; os demais jobs consomem via
 `needs.config.outputs.<flag> == 'true'`.
 
-> **Seleção de track (issueops):** em um ano com mais de uma track publicada,
-> o aluno seleciona comentando `/track <nome>` na issue "🎯 Preparar entrega"
-> — o workflow grava `.prova/track` (commit de bot) e o *Aplicar prova* passa
-> a exigí-la. Sem seleção e com múltiplas tracks, a aplicação trava de
-> propósito (erro claro no log). Com track única, a seleção é implícita.
+> **Seleção de track (issueops):** as candidatas são o **dummy permanente**
+> (`exams/dummy-exam/`, fora da hierarquia de ano — prova-teste) + as tracks
+> do **ano mais recente** (`exams/<ano>/<track>/`). O aluno seleciona
+> comentando `/track <nome-da-pasta>` na issue "🎯 Preparar entrega" (ex.:
+> `/track crud-fullstack`, `/track dummy-exam`) — o workflow grava `.prova/track`
+> (commit de bot) e o *Aplicar prova* faz match pelo **nome da pasta**. Com
+> exatamente **1 candidata**, a seleção é implícita; com várias, a aplicação
+> **trava de propósito** (erro claro no log listando as opções) — assim o
+> dummy nunca é aplicado por engano junto com provas reais. Anos anteriores
+> ficam no histórico do repo (fora da `main`) e não entram na seleção.
 
 ## Como criar uma NOVA track (checklist para LLM/humano)
 
@@ -102,7 +107,8 @@ preencher seus `outputs`; os demais jobs consomem via
    tabelas de parâmetros — a variante do aluno deriva do nome do repo;
    `endpoints` detalhados; bloco `frontend` se `recursos.frontend`).
 4. **Rubrica**: `nota_max`, `extras_max` (0 se não houver extras),
-   `janela_minutos` (enforcement; divulgação segue 1h30), pesos dos critérios.
+   `janela_minutos` (enforcement e divulgação — `aplicar_prova.py` divulga o
+   valor real na issue da prova), pesos dos critérios.
 5. **Testes públicos**: autossuficientes (só stdlib), leem a variante com
    `from variante import slug_do_repo, variante`, e falham com mensagem que
    ajuda o aluno (sem revelar os casos escondidos).

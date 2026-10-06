@@ -54,11 +54,6 @@ def arvore(path):
             full = os.path.join(root, name)
             out[os.path.relpath(full, path)] = sha(full)
     return out
-    for root, _, files in os.walk(path):
-        for name in files:
-            full = os.path.join(root, name)
-            out[os.path.relpath(full, BASE if os.path.exists(os.path.join(BASE, path)) else path)] = sha(full)
-    return out
 
 
 # ---- T2: identidade canonica ----

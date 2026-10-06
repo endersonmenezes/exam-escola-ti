@@ -32,6 +32,7 @@ jobs:
       estrutura: ${{ steps.lock.outputs.estrutura }}
       testes_publicos: ${{ steps.lock.outputs.testes_publicos }}
       testes_escondidos: ${{ steps.lock.outputs.testes_escondidos }}
+      nota: ${{ steps.lock.outputs.nota }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
@@ -45,13 +46,14 @@ jobs:
           echo "estrutura=$(python scripts/track_lock.py get workflows.auto-correcao.estrutura)" >> "$GITHUB_OUTPUT"
           echo "testes_publicos=$(python scripts/track_lock.py get workflows.auto-correcao.testes-publicos)" >> "$GITHUB_OUTPUT"
           echo "testes_escondidos=$(python scripts/track_lock.py get workflows.auto-correcao.testes-escondidos)" >> "$GITHUB_OUTPUT"
+          echo "nota=$(python scripts/track_lock.py get workflows.auto-correcao.nota)" >> "$GITHUB_OUTPUT"
 
   trampas:
     name: Trampas (identidade, autoria, janela, integridade)
     needs: config
-    # anti-cola NAO e desligavel pela track: gate so na aplicacao. track.json
-    # da raiz e conferido contra o commit de aplicacao dentro do proprio job.
-    if: github.repository != 'endersonmenezes/exam-escola-ti' && needs.config.outputs.aplicada == 'true'
+    # gate duplo: prova aplicada + chave da track (docs/TRACKS.md — cada job
+    # so roda se sua chave em workflows for true).
+    if: github.repository != 'endersonmenezes/exam-escola-ti' && needs.config.outputs.aplicada == 'true' && needs.config.outputs.trampas == 'true'
     runs-on: ubuntu-slim
     outputs:
       zerado: ${{ steps.check.outputs.zerado }}
@@ -128,7 +130,7 @@ jobs:
           CORRECAO_REPO: ${{ vars.CORRECAO_REPO }}
         run: |
           if [ -z "$CORRECAO_TOKEN" ] || [ -z "$CORRECAO_REPO" ]; then
-            echo "Sem CORRECAO_TOKEN/CORRECAO_REPO — testes escondidos NÃO executados (configurar no repositório)."
+            echo "suíte escondida não roda no CI — a correção é executada manualmente pelo professor fora do CI; skip por design (sem CORRECAO_TOKEN/CORRECAO_REPO)."
             exit 0
           fi
           git clone --depth 1 "https://x-access-token:${CORRECAO_TOKEN}@github.com/${CORRECAO_REPO}.git" correcao
@@ -143,7 +145,7 @@ jobs:
   nota:
     name: Nota parcial
     needs: [config, trampas, estrutura, testes-publicos, testes-escondidos]
-    if: github.repository != 'endersonmenezes/exam-escola-ti' && always() && needs.config.outputs.aplicada == 'true'
+    if: github.repository != 'endersonmenezes/exam-escola-ti' && always() && needs.config.outputs.aplicada == 'true' && needs.config.outputs.nota == 'true'
     runs-on: ubuntu-slim
     steps:
       - uses: actions/checkout@v7

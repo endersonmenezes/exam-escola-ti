@@ -6,7 +6,13 @@ workflow_dispatch. Idempotente via `.prova/aplicada-<pasta>`.
 
 Fluxo:
   1. fetch do remote do template (repo publico — sem PAT);
-  2. descobre a pasta do ano mais recente (padrao `<ano>/<prova>/`);
+  2. monta as CANDIDATAS: o dummy permanente (`exams/dummy-exam/`, fora da
+     hierarquia de ano) + as tracks do ANO MAIS RECENTE (`exams/<ano>/<track>/`).
+     Selecao pela marcacao `.prova/track` (NOME DA PASTA, ex.:
+     `crud-fullstack`, `dummy-exam`); com exatamente 1 candidata a selecao e
+     implicita; com varias, a aplicacao TRAVA DE PROPOSITO ate o `/track`
+     comentado na issue "Preparar entrega" (o dummy nunca e aplicado por
+     engano ao lado de provas reais);
   3. se ainda nao aplicada: `git checkout <ref> -- <pasta>`, sentinela,
      commit do bot (esse commit ancora o t0 da janela — T4) e push;
   4. gera .prova/exam-dir + variante/params.json e abre a issue da prova.
@@ -32,6 +38,7 @@ REPO = os.environ.get("REPO_SLUG") or slug_do_repo()
 TEMPLATE_URL = os.environ.get(
     "TEMPLATE_URL", "https://github.com/endersonmenezes/exam-escola-ti.git")
 DRY_RUN = os.environ.get("DRY_RUN", "") == "1"
+DUMMY = "exams/dummy-exam"  # prova-teste PERMANENTE, fora da hierarquia de ano
 REMOTE = "prova-template"
 
 
@@ -54,9 +61,14 @@ def api(method, path, payload=None):
 
 
 def pastas_do_ano_na(ref: str):
+    """Pastas de prova publicadas numa ref: o dummy permanente
+    (`exams/dummy-exam/`) + as tracks dos anos (`exams/<ano>/<track>/`)."""
     r = git("ls-tree", "-r", "--name-only", ref)
-    return sorted({m.group(1)
-                   for m in re.finditer(r"^(exams/\d{4}/[^/]+)/", r.stdout, re.M)})
+    pastas = {m.group(1)
+              for m in re.finditer(r"^(exams/\d{4}/[^/]+)/", r.stdout, re.M)}
+    if re.search(r"^exams/dummy-exam/", r.stdout, re.M):
+        pastas.add(DUMMY)
+    return sorted(pastas)
 
 
 def main():
@@ -82,23 +94,37 @@ def main():
         print("Nenhuma pasta de prova publicada no template ainda.")
         return
 
-    # 2) ano mais recente + track (selecao na issue -> .prova/track; fallback:
-    #    track unica do ano -> selecao implicita)
-    ano = max(p.split("/")[1] for p in pastas)
-    do_ano = sorted(p for p in pastas if p.split("/")[1] == ano)
+    # 2) candidatas = dummy permanente + tracks do ANO MAIS RECENTE. Selecao
+    #    pela marcacao .prova/track (NOME DA PASTA); candidata unica -> impli-
+    #    cita; varias -> trava de proposito ate o /track na issue.
+    anos = sorted({p.split("/")[1] for p in pastas
+                   if re.match(r"exams/\d{4}/", p)})
+    ano = anos[-1] if anos else ""
+    candidatas = sorted(p for p in pastas
+                        if p == DUMMY or (ano and p.split("/")[1] == ano))
     track_marcada = ""
     track_path = os.path.join(BASE, ".prova", "track")
     if os.path.exists(track_path):
         track_marcada = open(track_path, encoding="utf-8").read().strip()
     if track_marcada:
-        escolhidas = [p for p in do_ano if p.endswith("/" + track_marcada)]
-    elif len(do_ano) == 1:
-        escolhidas = do_ano  # track unica: selecao implicita
+        escolhidas = [p for p in candidatas
+                      if os.path.basename(p) == track_marcada]
+    elif len(candidatas) == 1:
+        escolhidas = candidatas  # candidata unica: selecao implicita
     else:
         escolhidas = []
     if not escolhidas:
-        print("Track nao selecionada. Ano %s tem: %s — marque a track na issue "
-              "'Preparar entrega' (grava .prova/track)." % (ano, ", ".join(do_ano)))
+        opcoes = [("%s (prova-teste)" % p) if p == DUMMY else p
+                  for p in candidatas]
+        if track_marcada:
+            print("Track '%s' nao encontrada entre as candidatas: %s — comente "
+                  "`/track <nome>` na issue 'Preparar entrega' (grava "
+                  ".prova/track; use `/track dummy-exam` para a prova-teste)."
+                  % (track_marcada, ", ".join(opcoes)))
+        else:
+            print("Track nao selecionada. Candidatas: %s — comente `/track <nome>` "
+                  "na issue 'Preparar entrega' (grava .prova/track; use "
+                  "`/track dummy-exam` para a prova-teste)." % ", ".join(opcoes))
         return
     pasta = escolhidas[-1]
     print("Pasta da prova escolhida:", pasta)
@@ -146,7 +172,8 @@ def main():
     with open(os.path.join(BASE, ".prova", "exam-dir"), "w", encoding="utf-8") as f:
         f.write(pasta + "\n")
 
-    # 5) janela (enforcement; divulgacao segue 1h30) e variante agora computavel
+    # 5) janela (enforcement e divulgação usam janela_minutos da rubrica) e
+    #    variante agora computavel
     janela = 120
     rubrica_path = os.path.join(BASE, "rubrica.json")
     if os.path.exists(rubrica_path):
@@ -177,14 +204,14 @@ def main():
         params = "\n".join("- `%s` = %s" % (k, val) for k, val in v.items()
                            if k not in ("slug", "EXAM_DIR"))
         corpo = ("## A prova foi aplicada neste repositorio\n\n"
-                 "Pasta: `%s` — a prova vale **1h30** (aprox. duas aulas "
-                 "completas), contadas a partir do commit de aplicacao. O "
-                 "relogio ja esta rodando.\n\n"
+                 "Pasta: `%s` — a janela da prova é de **%d minutos**, "
+                 "contados a partir do commit de aplicacao. O relogio ja esta "
+                 "rodando.\n\n"
                  "Sua variante (unica do seu repo):\n\n%s\n\n"
                  "> [!IMPORTANT]\n> Leia o contrato, desenvolva, preencha "
                  "`FONTES.md` se consultar algo e de push antes do fim da "
-                     "janela. A nota parcial sai no workflow *Auto-correcao*."
-                 % (pasta, params))
+                 "janela. A nota parcial sai no workflow *Auto-correcao*."
+                 % (pasta, janela, params))
         status, issue = api("POST", "/repos/%s/issues" % REPO_FULL,
                             {"title": "📝 Prova aplicada: %s" % pasta,
                              "body": corpo, "labels": ["prova-aplicada"]})
