@@ -10,7 +10,15 @@ e ainda escreve o JSON no Step Summary.
 Se a prova nunca foi aplicada, gera o arquivo do mesmo jeito, com
 `"aplicada": false` + motivo — fechar sem aplicar e caso real.
 
-DRY_RUN=1 gera o arquivo local sem commit/push/comentario (para teste).
+GATE (v3.4): o fechamento exige que a auto-correção tenha rodado ao menos 1x
+— o GitHub não permite vetar o fechamento de issue, entao, se o marcador
+`<!-- nota-parcial -->` (upsert do nota.py) NÃO existir nos comentarios da
+issue, este workflow REABRE a issue com aviso e NAO gera o teacher.json.
+Quando presente, o teacher.json ganha `"auto_correcao"` com o flag e a
+ultima nota parseada do comentario.
+
+DRY_RUN=1 gera o arquivo local sem commit/push/comentario e sem gate (sem
+API) — para teste.
 """
 import json
 import os
@@ -67,6 +75,47 @@ def main():
         return
 
     gerado_em = iso_agora()
+
+    # ---- GATE: /auto-correcao ao menos 1x (marcador <!-- nota-parcial -->)
+    # na issue. Ausente -> reabre com aviso e NAO gera teacher.json.
+    auto_correcao = {"executada": True, "nota_ultima": None}
+    if not DRY_RUN and TOKEN and REPO_FULL:
+        marcador = "<!-- nota-parcial -->"
+        achou = False
+        pagina = 1
+        while True:
+            status, comentarios = prova_issue._api(
+                "GET", "/repos/%s/issues/%s/comments?per_page=100&page=%d"
+                % (REPO_FULL, lock, pagina))
+            if status != 200 or not isinstance(comentarios, list) or not comentarios:
+                break
+            for c in comentarios:
+                corpo_c = c.get("body") or ""
+                if corpo_c.startswith(marcador):
+                    achou = True
+                    m_nota = re.search(r"\*\*Nota parcial:\*\*\s*(\d+)", corpo_c)
+                    if m_nota:
+                        auto_correcao["nota_ultima"] = int(m_nota.group(1))
+            if len(comentarios) < 100:
+                break
+            pagina += 1
+        auto_correcao["executada"] = achou
+        if not achou:
+            prova_issue.comentar(
+                "⚠️ Você ainda não rodou a correção. Comente `/auto-correcao` "
+                "nesta issue, aguarde a nota e feche novamente.")
+            prova_issue._api("PATCH", "/repos/%s/issues/%s" % (REPO_FULL, lock),
+                             {"state": "open"})
+            print("Sem /auto-correcao — issue #%d reaberta com aviso; "
+                  "teacher.json NAO gerado." % lock)
+            summary = os.environ.get("GITHUB_STEP_SUMMARY")
+            if summary:
+                with open(summary, "a", encoding="utf-8") as f:
+                    f.write("## Fechamento bloqueado\n\nO aluno fechou a issue "
+                            "sem rodar `/auto-correcao`. A issue foi **reaberta** "
+                            "com um aviso; o `teacher.json` só será gerado após "
+                            "a primeira correção.\n")
+            return
 
     # ---- prova aplicada? ----
     pasta = pasta_do_ano(BASE)
@@ -186,6 +235,7 @@ def main():
                     "primeiro": primeiro, "ultimo": ultimo_push,
                     "fora_da_janela": fora},
         "nota_parcial": {"valor": valor, "criterios": criterios},
+        "auto_correcao": auto_correcao,
         "fontes": {"presente": presente, "declarou_vazio": declarou_vazio,
                    "links": links},
     }

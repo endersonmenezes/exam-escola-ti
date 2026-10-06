@@ -5,6 +5,10 @@ Valida a preparacao (ALUNO.md com RA, identidade, FONTES.md editado, variante)
 e — se a prova ja foi aplicada — a variante, e responde NA PROPRIA ISSUE
 (comentario; NAO fecha: o fechamento encerra a prova — ver fechar_prova.py).
 
+Comandos (comentarios na issue): `/track <nome>` (selecao, abaixo),
+`/ajuda`/`--help` (lista de comandos + lembrete do ciclo) e `/auto-correcao`
+(NAO gera estado aqui — sem spam; a auto-correcao responde pela propria run).
+
 Selecao `/track <nome>` (issueops):
 - valida o nome contra as candidatas do template (scripts/selecao.py);
 - comenta o feedback NA HORA (modo sandbox para o dummy / erro listando as
@@ -34,8 +38,22 @@ TOKEN = os.environ.get("GH_TOKEN", "")
 REPO_FULL = os.environ.get("REPO_FULL", "")
 NUMERO = os.environ.get("ISSUE_NUMBER", "")
 REPO = os.environ.get("REPO_SLUG") or slug_do_repo()
+CORPO_COMENTARIO = os.environ.get("ISSUE_COMMENT_BODY", "")
 TEMPLATE_URL = os.environ.get(
     "TEMPLATE_URL", "https://github.com/endersonmenezes/exam-escola-ti.git")
+
+AJUDA = (
+    "**Comandos disponíveis** (comente nesta issue):\n"
+    "- `/track <nome>` — seleciona a prova (ex.: `/track dummy-exam`)\n"
+    "- `/aplicar` — força a aplicação da prova selecionada\n"
+    "- `/auto-correcao` — roda a correção completa (trampas + testes "
+    "públicos + nota). **Obrigatório ao menos 1x antes de fechar a issue.**\n"
+    "- `/ajuda` ou `--help` — mostra esta lista\n"
+    "\n"
+    "**Ciclo:** preencha `ALUNO.md` → `/track` → desenvolva (commits "
+    "pequenos!) → `/auto-correcao` → feche a issue (gera `teacher.json`).\n"
+    "Dica: pushes não disparam correção — rode o comando quando quiser "
+    "feedback.")
 
 
 def api(method, path, payload=None):
@@ -154,6 +172,19 @@ def main():
         prova.append("✅ track `%s` gravada em `.prova/track` — a aplicação foi "
                      "disparada (acompanhe por aqui)." % escolhida)
 
+    # comandos que NAO geram comentario de estado (sem spam):
+    # /ajuda responde a lista; /auto-correcao e atendido pela propria
+    # auto-correcao (issue_comment) — aqui e silencio para o estado.
+    corpo_l = CORPO_COMENTARIO.lower()
+    if "/ajuda" in corpo_l or "--help" in corpo_l:
+        prova_issue.comentar(AJUDA)
+        print("Resposta de /ajuda postada na issue #%s." % lock)
+        return
+    if "/auto-correcao" in corpo_l:
+        print("Comentario /auto-correcao — sem estado do preparar (a "
+              "auto-correcao responde pela propria run).")
+        return
+
     # 1) ALUNO.md com RA — Fase 1 (Identidade)
     aluno_path = os.path.join(BASE, "ALUNO.md")
     if not os.path.exists(aluno_path):
@@ -199,8 +230,10 @@ def main():
                  "\n\nResolva os ❌ e marque os checkboxes de novo; eu revalido. 💪")
     else:
         if pasta:
-            proximo = ("Desenvolva e dê push dentro da janela; **feche esta issue "
-                       "ao final** — o sistema gera o `teacher.json` de entrega.")
+            proximo = ("Desenvolva e dê push dentro da janela; rode "
+                       "`/auto-correcao` quando quiser feedback; **feche esta "
+                       "issue ao final** — o sistema gera o `teacher.json` de "
+                       "entrega.")
         elif escolhida:
             proximo = ("Sua seleção foi registrada — a prova será aplicada em "
                        "instantes (acompanhe por aqui).")

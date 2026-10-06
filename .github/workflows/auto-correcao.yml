@@ -1,11 +1,20 @@
 name: Auto-correção — exam-escola-ti
 
+# Correção SOB DEMANDA (v3.4): a correção completa (trampas + entrega +
+# testes públicos + nota) roda quando o ALUNO PEDE — comentando
+# `/auto-correcao` na issue "🎯 Prova" — ou pelo workflow_dispatch (botão,
+# professor/aluno). Pushes NÃO disparam correção (economia de CI e foco em
+# commits pequenos, não em ficar olhando o pipeline). A correção é OBRIGATÓRIA
+# ao menos 1x antes de fechar a issue: o fechar-prova reabre a issue com aviso
+# se a marcação de nota (`<!-- nota-parcial -->`) ainda não existir.
+#
 # Workflows sao do ESQUELETO (sempre os mesmos) e cada track LIGA/DESLIGA seus
 # jobs via lockfile track.json (vem na pasta do ano, overlay na raiz).
 # Sem lockfile = prova nao aplicada: tudo fica desligado (jobs "skipped").
 
 on:
-  push:
+  issue_comment:
+    types: [created]
   workflow_dispatch:
     inputs:
       inicio:
@@ -20,7 +29,7 @@ permissions:
   issues: write   # job de nota replica a nota parcial na issue unica da prova
 
 concurrency:
-  # push-spam coalesce: a corrida mais recente da auto-correcao vence
+  # sob demanda: pedidos seguidos coalesce — a corrida mais recente vence
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
@@ -30,7 +39,8 @@ env:
 jobs:
   config:
     name: Lockfile da track (liga/desliga os jobs)
-    if: github.repository != 'endersonmenezes/exam-escola-ti'
+    # sobe para dispatch ou para comentario "/auto-correcao" na issue
+    if: github.repository != 'endersonmenezes/exam-escola-ti' && (github.event_name != 'issue_comment' || contains(github.event.comment.body, '/auto-correcao'))
     runs-on: ubuntu-slim
     outputs:
       aplicada: ${{ steps.lock.outputs.aplicada }}

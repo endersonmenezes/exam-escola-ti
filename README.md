@@ -64,9 +64,9 @@ flowchart TD
     C --> D["Aluno SELECIONA a track:<br/>/track &lt;nome&gt; na issue (obrigatório)<br/>/track dummy-exam = prova-teste"]
     D --> E["Dia da prova: professor publica<br/>exams/&lt;ano&gt;/&lt;track&gt;/ na main do template"]
     E --> F["aplicar-prova.yml: overlay + commit<br/>do bot (t0 da janela) + COMENTÁRIO<br/>na issue (pasta, janela, variante)"]
-    F --> G["Aluno desenvolve e dá push<br/>dentro da janela"]
-    G --> H["auto-correcao.yml — nota parcial<br/>no Summary E em comentário<br/>upsert de nota na issue"]
-    H --> I["ALUNO FECHA A ISSUE 🎯 Prova<br/>= encerra a prova"]
+    F --> G["Aluno desenvolve e dá push<br/>(commits pequenos — push<br/>NÃO dispara correção)"]
+    G --> H["Aluno comenta /auto-correcao<br/>na issue (sob demanda)<br/>nota no Summary E na issue"]
+    H --> I["ALUNO FECHA A ISSUE 🎯 Prova<br/>= encerra a prova<br/>(gate: ≥1 /auto-correcao)"]
     I --> J["fechar-prova.yml — teacher.json<br/>(schema 1) na raiz, commit do bot"]
     J --> K["(fora do repo) esteira do teacher:<br/>suíte escondida + feedback<br/>devolvido na issue do aluno"]
 ```
@@ -77,7 +77,10 @@ com provas reais publicadas o dummy continua sendo só mais uma candidata —
 nunca aplicado por engano. A prova se encerra quando **o aluno fecha a issue
 🎯 Prova**: o workflow *Fechar prova* gera o `teacher.json` (schema 1) na
 raiz, que é o handshake de entrega para a esteira de correção do professor
-(repo privado `teacher-escola-ti`).
+(repo privado `teacher-escola-ti`). A auto-correção é **sob demanda**
+(`/auto-correcao` na issue ou dispatch — pushes não disparam) e o
+*Fechar prova* **exige** ao menos 1 correção: sem o marcador de nota na
+issue, ele reabre com aviso em vez de gerar o `teacher.json`.
 
 - **Janela auto-ancorada**: a trampa T4 mede a janela a partir do commit
   "aplicar prova" + `janela_minutos` da rubrica — enforcement e divulgação
@@ -156,8 +159,14 @@ nunca é aplicado por engano no dia de uma prova real.
 1. Crie um repo de teste: `gh repo create prova-teste-meu-login --template endersonmenezes/exam-escola-ti --private` (ou o botão "Use this template"). O setup roda sozinho no push de criação: identidade, `ALUNO.md` e `README.md` com o botão "🎯 Iniciar a prova", e a **issue única "🎯 Prova"** (lock `.prova/issue`).
 2. Complete o RA em `ALUNO.md` e marque os checkboxes na issue — *Preparar entrega* valida e responde na issue.
 3. Comente `/track dummy-exam` na issue: o sistema valida, responde na hora e **aplica a prova-teste automaticamente** (overlay — `contrato.json` na raiz, README novo, `tests/public/` —, commit do bot = t0 da janela, comentário com a sua variante). Comentar "aplicar" na issue também força, se quiser antecipar.
-4. Implemente algo em `src/` + `Dockerfile`, dê push — *Auto-correção* roda com a janela ancorada e a nota sai no Summary **e em comentário na issue**.
-5. Feche a issue "🎯 Prova" — o *Fechar prova* gera o `teacher.json` na raiz (handshake de entrega).
+4. Implemente algo em `src/` + `Dockerfile` e dê push — **pushes não disparam
+   correção**; quando quiser feedback, comente `/auto-correcao` na issue: a
+   *Auto-correção* roda na hora (trampas + testes públicos) e a nota sai no
+   Summary **e em comentário na issue**. Rode ao menos 1x — é requisito para
+   fechar.
+5. Feche a issue "🎯 Prova" — o *Fechar prova* gera o `teacher.json` na raiz
+   (handshake de entrega). Fechar sem ter rodado `/auto-correcao` **reabre a
+   issue com aviso**.
 
 **Teste B — professor com fork (provar o sistema de ponta a ponta):**
 1. Fork deste repo e registre a var `TEMPLATE_URL` apontando para **o seu fork**

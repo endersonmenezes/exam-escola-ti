@@ -70,7 +70,7 @@ if criterios:
                                           c.get("pontos", 0), c.get("max", 0)))
 else:
     linhas.append("| (nenhum criterio executado) | 0 |")
-linhas += ["", "**Nota parcial: %d/%d** (base %d + extras %d)"
+linhas += ["", "**Nota parcial:** %d/%d (base %d + extras %d)"
            % (nota, teto + extras_teto, base, extras)]
 if fatal_geral:
     linhas += ["", "### Motivos de zeramento", ""] + ["- " + f for f in fatal_geral]

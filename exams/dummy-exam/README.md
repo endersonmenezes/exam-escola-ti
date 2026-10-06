@@ -31,8 +31,9 @@ repositório, então copiar de colega não funciona.
 - **Contrato**: `contrato.json` (endpoints, regras da saudação, variante)
 - **Sua variante**: `variante/params.json` (gerada na aplicação; única do seu repo)
 - **Testes públicos**: `bash scripts/rodar_testes.sh` (requer Docker)
-- **Nota**: a cada push, no Summary do workflow *Auto-correção* **e em
-  comentário na issue "🎯 Prova"** (a nota é atualizada no mesmo comentário)
+- **Nota**: rode `/auto-correcao` na issue "🎯 Prova" — a nota sai no
+  Summary do workflow *Auto-correção* **e em comentário na issue** (atualizado
+  no mesmo comentário). Obrigatório ao menos 1x antes de fechar.
 - **Regras e rastreabilidade**: `docs/REGRAS.md` e `FONTES.md`
 
 ## Parâmetros da sua variante
@@ -92,6 +93,10 @@ seleção é **sempre obrigatória** — nada de aplicação automática sem esc
 2. Implemente em `src/app.py` (apague o `TODO`) + confira o `Dockerfile`.
 3. Rode `bash scripts/rodar_testes.sh` localmente (requer Docker) e veja os
    5 testes passarem.
-4. Commits pequenos, push antes do fim da janela.
-5. **Ao final, feche a issue "🎯 Prova"** — isso encerra a prova e gera o
-   `teacher.json` de entrega. Boa prova! 🚀
+4. Commits pequenos, push antes do fim da janela — pushes **não** disparam
+   correção.
+5. Rode `/auto-correcao` na issue "🎯 Prova" e veja a nota (Summary +
+   comentário na issue). **Obrigatório ao menos 1x.**
+6. **Feche a issue "🎯 Prova"** — isso encerra a prova e gera o
+   `teacher.json` de entrega. Fechar sem `/auto-correcao` reabre a issue com
+   aviso. Boa prova! 🚀

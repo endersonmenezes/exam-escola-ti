@@ -100,6 +100,15 @@ preencher seus `outputs`; os demais jobs consomem via
 > lembrete na issue (uma única vez — upsert + sentinela `.prova/track-lembrete`).
 > Anos anteriores ficam no histórico do repo (fora da `main`) e não entram na
 > seleção.
+>
+> **Auto-correção sob demanda (v3.4):** a correção completa (trampas +
+> entrega + testes públicos + nota) **não roda a cada push** — o aluno a
+> solicita comentando `/auto-correcao` na issue (ou via workflow_dispatch).
+> Fechar a issue exige ao menos 1 correção: o *Fechar prova* procura o
+> marcador `<!-- nota-parcial -->` (upsert do nota.py) nos comentários e,
+> se ausente, **reabre a issue com aviso** em vez de gerar o `teacher.json`.
+> Comandos na issue: `/track <nome>`, `/aplicar`, `/auto-correcao` e
+> `/ajuda`/`--help` (lista, atendido pelo *Preparar entrega*).
 
 ## Como criar uma NOVA track (checklist para LLM/humano)
 

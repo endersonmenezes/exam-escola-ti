@@ -80,8 +80,11 @@ def readme_primeiros_passos(numero_issue):
             "acontece.\n"
             "3. **Selecione sua prova** comentando `/track <nome>` na issue "
             "(a lista está no comentário de boas-vindas).\n"
-            "4. A prova é aplicada no repo (overlay); desenvolva e dê push.\n"
-            "5. **Feche a issue para encerrar** — o sistema gera o "
+            "4. A prova é aplicada no repo (overlay); desenvolva e dê push. "
+            "**Pushes não disparam correção** — quando quiser feedback, rode "
+            "`/auto-correcao` na issue.\n"
+            "5. **Feche a issue para encerrar** — o sistema só aceita o "
+            "fechamento depois de ao menos 1 `/auto-correcao` e gera o "
             "`teacher.json` de entrega.\n")
 
 
@@ -102,7 +105,11 @@ def comentario_boas_vindas(numero_issue, candidatas):
                           "o sistema)" % nome)
         else:
             linhas.append("- `%s`" % nome)
-    linhas += ["", "Selecione comentando `/track <nome>` nesta issue."]
+    linhas += ["", "Selecione comentando `/track <nome>` nesta issue.",
+               "",
+               "Comandos: comente `/ajuda` aqui para ver todos. Lembre: rode "
+               "`/auto-correcao` ao menos 1x antes de fechar a issue — o "
+               "fechamento sem correção reabre a issue com aviso."]
     return "\n".join(linhas)
 
 

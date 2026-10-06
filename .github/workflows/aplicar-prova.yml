@@ -37,10 +37,10 @@ env:
 jobs:
   aplicar:
     name: Descobrir pasta do ano, aplicar e comentar na issue
-    # no-op no repositorio-template; em issue_comment, so roda para "/track"
-    # (o proprio script valida o nome) ou "aplicar" — demais comentarios sao
-    # ignorados aqui (e o script teria early-exit silencioso mesmo assim)
-    if: github.repository != 'endersonmenezes/exam-escola-ti' && (github.event_name != 'issue_comment' || contains(github.event.comment.body, '/track ') || contains(github.event.comment.body, 'aplicar'))
+    # no-op no repositorio-template; em issue_comment: sobe para "/track <nome>"
+    # (o proprio script valida o nome), "/aplicar" ou "aplicar" solto. Comentarios
+    # "/auto-correcao" e demais NAO disparam a aplicacao.
+    if: github.repository != 'endersonmenezes/exam-escola-ti' && (github.event_name != 'issue_comment' || contains(github.event.comment.body, '/track ') || contains(github.event.comment.body, '/aplicar') || contains(github.event.comment.body, 'aplicar'))
     runs-on: ubuntu-slim
     steps:
       - uses: actions/checkout@v7
