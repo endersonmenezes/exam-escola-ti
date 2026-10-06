@@ -39,6 +39,7 @@ vendor/
 # ---- NÃO ignorar: .prova/, variante/ e a pasta do ano são commitados
 #      pelo bot (GITHUB_TOKEN) nos repositórios dos alunos.
 
-# ---- _docente/ é material do professor: vive no repo PRIVADO
-#      teacher-escola-ti, nunca no template público.
+# ---- _docente/ (LEGADO — rede de segurança): o material do professor vive
+#      na RAIZ do repo PRIVADO teacher-escola-ti; esta entrada só evita que
+#      um _docente/ residual seja commitado aqui por engano.
 _docente/

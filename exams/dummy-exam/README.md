@@ -21,9 +21,10 @@ repositório, então copiar de colega não funciona.
 | **Total** | **100** |
 
 > Sem pontos extras e sem suíte escondida nesta prova-teste — a nota do CI já
-> é a nota. Nas provas reais, a nota do CI é **parcial**: a suíte escondida
-> não roda no CI e a nota definitiva é apurada pelo professor na correção
-> manual.
+> é a nota desta prova-teste. Nas provas reais, a nota do CI é **parcial**: a
+> suíte escondida não roda no CI do aluno e a nota definitiva é apurada pelo
+> professor fora dele — correção manual ou via Actions do repo privado do
+> professor, com a data de criação dos testes verificável pelos alunos.
 
 ## Suas ferramentas neste repo
 

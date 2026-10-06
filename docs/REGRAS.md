@@ -13,9 +13,10 @@
   ano (`rubrica.json`). Quando a rubrica define `extras_max`, a nota pode
   **ultrapassar 100** até o teto `nota_max + extras_max`.
 - **A nota exibida no CI é parcial** — testes públicos + checagens (trampas e
-  entrega). A nota definitiva inclui a **suíte escondida**, executada
-  **manualmente pelo professor fora do CI** (o job de testes escondidos pula
-  por design quando o repo de correção não está configurado — não é erro).
+  entrega). A nota definitiva inclui a **suíte escondida**, executada **fora
+  do CI do aluno** (correção manual pelo professor ou Actions do repo privado
+  `teacher-escola-ti` — o job de testes escondidos pula por design quando o
+  repo de correção não está configurado; não é erro).
 - Critérios objetivos: dúvida de correção se resolve **reexecutando o
   workflow**, não por negociação.
 
