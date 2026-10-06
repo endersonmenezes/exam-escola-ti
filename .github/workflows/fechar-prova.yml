@@ -12,7 +12,8 @@ on:
     types: [closed]
 
 concurrency:
-  group: prova-bot-${{ github.repository }}
+  # fechamento gera o teacher.json — deve completar; eventos em fila
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
 permissions:

@@ -12,6 +12,11 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  # validaçao mais recente vence — push-spam coalesce no template
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   validar:
     if: github.repository == 'endersonmenezes/exam-escola-ti'

@@ -13,8 +13,9 @@ on:
     types: [created]
 
 concurrency:
-  group: prova-bot-${{ github.repository }}
-  cancel-in-progress: false
+  # validacao mais recente vence — resolve o checkbox-spam (issues: edited)
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   issues: write

@@ -89,8 +89,12 @@ preencher seus `outputs`; os demais jobs consomem via
 > (ex.: `/track crud-fullstack`, `/track dummy-exam`) — o *Preparar entrega*
 > valida o nome contra as candidatas (`scripts/selecao.py`), comenta o
 > feedback na hora (modo sandbox para o dummy) e grava `.prova/track` em
-> commit de bot; **o push desse commit dispara o *Aplicar prova*** — a
-> aplicação é consequência da seleção. Antes de qualquer seleção o
+> commit de bot. Detalhe de plataforma: **pushes feitos com `GITHUB_TOKEN` (o
+> bot) não disparam workflows** (regra anti-recursão do GitHub) — por isso o
+> **próprio comentário `/track` dispara o *Aplicar prova*** (issue_comment) e
+> aplica na hora, sem esperar o commit do bot; o schedule (≤10 min) é o
+> backstop e o `.prova/track` gravado cobre repos clonados na mão e re-runs.
+> Antes de qualquer seleção o
 > *Aplicar prova* é **no-op silencioso** (o gatilho push do repo não gera
 > barulho na criação); com `.prova/track` inválido ele trava e comenta um
 > lembrete na issue (uma única vez — upsert + sentinela `.prova/track-lembrete`).

@@ -4,30 +4,37 @@
 Gatilhos: schedule (polling a cada 10 min), push, issue_comment e
 workflow_dispatch. Idempotente via `.prova/aplicada-<pasta>`.
 
-A aplicacao e CONSEQUENCIA da SELECAO (issueops): o workflow roda em todos
-esses gatilhos, mas **sem `.prova/track` ele nem comeca** — sys.exit(0)
-silencioso logo no inicio, sem fetch, sem comentario (o push de criacao do
-repo vira no-op quieto). Quando o aluno comenta `/track <nome>` na issue, o
-*Preparar entrega* grava `.prova/track` em commit de bot e da push — e e o
-PUSH DESSE COMMIT que dispara a aplicacao aqui, na hora.
+A aplicacao e CONSEQUENCIA da SELECAO (issueops) — com um detalhe real de
+plataforma: **pushes feitos com GITHUB_TOKEN NAO disparam workflows** (regra
+anti-recursao do GitHub), entao o commit do bot que grava `.prova/track` NAO
+dispara este workflow por push. Por isso o comentario `/track <nome>` na issue
+TAMBEM dispara este workflow (issue_comment) e aplica na hora — sem esperar o
+commit do bot (evita corrida). O schedule (<=10 min) e o backstop; o push
+continua cobrindo commits normais do aluno e re-runs.
 
-Fluxo (so roda com `.prova/track` presente):
-  1. fetch do remote do template (repo publico — sem PAT; o remote
+Fluxo:
+  1. SELECAO = `/track <nome>` do comentario (env ISSUE_COMMENT_BODY) ou, em
+     push/schedule, fallback no `.prova/track` (gravado pelo preparar_entrega
+     em commit de bot — necessario para repos clonados na mao/re-runs). Sem
+     nenhuma das fontes: sys.exit(0) SILENCIOSO (o push de criacao do repo
+     vira no-op quieto);
+  2. fetch do remote do template (repo publico — sem PAT; o remote
      `prova-template` e adicionado pelo sistema porque o repo gerado a
      partir do template NAO e fork);
-  2. monta as CANDIDATAS (scripts/selecao.py): dummy permanente + ano mais
-     recente. Selecao SEMPRE EXPLICITA — `.prova/track` com nome que nao
-     bate TRAVA e comenta o lembrete na issue (upsert `<!-- track-lembrete -->`
-     + sentinela `.prova/track-lembrete`, para nao spammar a cada polling);
-  3. se ainda nao aplicada: `git checkout <ref> -- <pasta>`, sentinela,
+  3. monta as CANDIDATAS (scripts/selecao.py): dummy permanente + ano mais
+     recente. Nome que nao bate TRAVA e comenta o lembrete na issue (upsert
+     `<!-- track-lembrete -->` + sentinela `.prova/track-lembrete`, para nao
+     spammar a cada polling);
+  4. se ainda nao aplicada: `git checkout <ref> -- <pasta>`, sentinela,
      commit do bot (esse commit ancora o t0 da janela — T4) e push;
-  4. gera .prova/exam-dir + variante/params.json e COMENTA na issue unica da
+  5. gera .prova/exam-dir + variante/params.json e COMENTA na issue unica da
      prova (pasta aplicada, janela, parametros) — nao cria issue nova.
 
 DRY_RUN=1 so descobre a pasta (local ou remoto) sem commitar.
 """
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -76,11 +83,23 @@ def main():
         print("Repositorio-template — nao e uma prova; no-op.")
         return
 
-    # v3.1: aplicacao e consequencia da SELECAO (issueops). Sem .prova/track
-    # (repo acabou de ser criado, p.ex.) e no-op SILENCIOSO — nem fetch, nem
-    # comentario. O push do bot que grava .prova/track (preparar_entrega.py)
-    # e que dispara a aplicacao na hora.
-    if not os.path.exists(os.path.join(BASE, ".prova", "track")):
+    # v3.2: a selecao vem do COMENTARIO /track <nome> (ISSUE_COMMENT_BODY) ou,
+    # em push/schedule, do .prova/track (commit do bot do preparar_entrega —
+    # cobre repos clonados na mao e re-runs; o push desse commit NAO disparia
+    # este workflow, por isso o comentario e o disparo real). Sem nenhuma das
+    # fontes: no-op SILENCIOSO — nem fetch, nem comentario.
+    corpo_comentario = os.environ.get("ISSUE_COMMENT_BODY", "")
+    track_comentario = ""
+    if corpo_comentario:
+        m = re.search(r"(?im)^\s*/track\s+([\w-]+)", corpo_comentario)
+        if m:
+            track_comentario = m.group(1)
+    track_arquivo = ""
+    track_path = os.path.join(BASE, ".prova", "track")
+    if os.path.exists(track_path):
+        track_arquivo = open(track_path, encoding="utf-8").read().strip()
+    track_marcada = track_comentario or track_arquivo
+    if not track_marcada:
         sys.exit(0)
 
     # 1) remote + fetch (repo publico; GITHUB_TOKEN do proprio repo basta)
@@ -94,11 +113,8 @@ def main():
         return
 
     # 2) candidatas = dummy permanente + tracks do ANO MAIS RECENTE (selecao.py).
-    #    .prova/track existe (early exit acima) — nome que nao bate TRAVA e
-    #    lembra UMA vez na issue (upsert + sentinela).
+    #    Nome que nao bate TRAVA e lembra UMA vez na issue (upsert + sentinela).
     candidatas = selecao.candidatas(pastas)
-    track_marcada = open(os.path.join(BASE, ".prova", "track"),
-                         encoding="utf-8").read().strip()
     escolhidas = [p for p in candidatas
                   if os.path.basename(p) == track_marcada]
     if not escolhidas:

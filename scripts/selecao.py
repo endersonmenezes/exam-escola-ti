@@ -28,10 +28,14 @@ def git(*args):
 
 
 def fetch_template(template_url: str) -> bool:
-    """Adiciona/atualiza o remote do template e faz fetch (main -> FETCH_HEAD)."""
+    """Adiciona/atualiza o remote do template e faz fetch (main -> FETCH_HEAD).
+
+    Fetch COMPLETO de proposito: um fetch --depth 1 marca o repo como shallow
+    e o push seguinte (commit do bot de aplicacao) e rejeitado com "shallow
+    update not allowed". O template e pequeno — o custo e irrelevante."""
     git("remote", "remove", REMOTE)
     git("remote", "add", REMOTE, template_url)
-    return git("fetch", "--depth", "1", REMOTE, "main").returncode == 0
+    return git("fetch", REMOTE, "main").returncode == 0
 
 
 def pastas_publicadas(ref: str = "FETCH_HEAD"):

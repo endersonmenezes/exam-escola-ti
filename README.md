@@ -85,6 +85,10 @@ raiz, que é o handshake de entrega para a esteira de correção do professor
 - **Não é fork**: o repo gerado a partir do template **não tem vínculo de
   fork** com ele — por isso o sistema adiciona o remote `prova-template` e
   faz fetch/checkout no momento da listagem (setup/preparar) e da aplicação.
+- **`/track` dispara a aplicação**: o comentário `/track <nome>` na issue
+  aplica a prova **imediatamente** — pushes feitos com `GITHUB_TOKEN` (o bot)
+  **não disparam workflows** (regra anti-recursão do GitHub), e o polling de
+  10 min é o backstop.
 - **Idempotência**: sentinela `.prova/aplicada-<pasta>` — o bot nunca aplica
   duas vezes.
 - **Variante por repositório**: `scripts/variante.py` deriva os parâmetros do
@@ -143,10 +147,10 @@ publicada na `main` o tempo todo, fora da hierarquia de ano.
 **Seleção:** candidatas são o dummy + as tracks do ano vigente, e a escolha é
 **sempre explícita**: comente `/track <nome>` na issue — `/track dummy-exam`
 escolhe a prova-teste. Sem seleção, a aplicação **nem dispara** (no-op
-silencioso); nome inválido trava com lembrete na própria issue. A aplicação é
-**consequência da seleção**: o commit do bot que grava `.prova/track` dispara
-o *Aplicar prova* na hora — assim o dummy nunca é aplicado por engano no dia
-de uma prova real.
+silencioso); nome inválido trava com lembrete na própria issue. O comentário
+`/track` **aplica a prova imediatamente** (pushes do bot com `GITHUB_TOKEN`
+não disparam workflows — o comentário em si é o gatilho) — assim o dummy
+nunca é aplicado por engano no dia de uma prova real.
 
 **Teste A — professor/dono do template (você está em `endersonmenezes/`):**
 1. Crie um repo de teste: `gh repo create prova-teste-meu-login --template endersonmenezes/exam-escola-ti --private` (ou o botão "Use this template"). O setup roda sozinho no push de criação: identidade, `ALUNO.md` e `README.md` com o botão "🎯 Iniciar a prova", e a **issue única "🎯 Prova"** (lock `.prova/issue`).

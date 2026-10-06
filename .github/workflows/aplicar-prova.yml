@@ -1,11 +1,14 @@
 name: Aplicar prova (pasta do ano publicada no template)
 
 # Roda em 4 gatilhos para nao depender de um so:
-#  - schedule: polling a cada 10 min (minutos :07, :17, ...) — cobre o caso de
-#    ninguem interagir com o repo no dia da prova. ATENCAO: schedules sao
-#    desativados apos 60 dias sem atividade no repo — por isso os demais gatilhos.
-#  - push: qualquer commit re-verifica se a pasta do ano ja apareceu.
-#  - issue_comment: aluno comenta "aplicar" na issue para forcar na hora.
+#  - schedule: polling a cada 10 min (minutos :07, :17, ...) — backstop caso o
+#    disparo imediato falhe. ATENCAO: schedules desativam apos 60 dias sem
+#    atividade no repo — por isso os demais gatilhos.
+#  - push: commit normal do aluno; o push do BOT que grava .prova/track NAO
+#    dispara workflow (GITHUB_TOKEN nao dispara workflows — anti-recursao),
+#    por isso o comentario /track abaixo e o disparo real da aplicacao.
+#  - issue_comment: "/track <nome>" (selecao — aplica na hora, sem esperar o
+#    commit do bot) ou "aplicar" (forcar manual).
 #  - workflow_dispatch: gatilho manual.
 
 on:
@@ -17,7 +20,8 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: prova-bot-${{ github.repository }}
+  # overlay nunca e interrompido: eventos em fila (cancel-in-progress: false)
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
 permissions:
@@ -28,12 +32,15 @@ env:
   REPO_SLUG: ${{ github.event.repository.name }}
   REPO_FULL: ${{ github.repository }}
   TEMPLATE_URL: ${{ vars.TEMPLATE_URL || 'https://github.com/endersonmenezes/exam-escola-ti.git' }}
+  ISSUE_COMMENT_BODY: ${{ github.event.comment.body }}
 
 jobs:
   aplicar:
-    name: Descobrir pasta do ano, aplicar e abrir issue da prova
-    # no-op no repositorio-template; em issue_comment, so quando pedem "aplicar"
-    if: github.repository != 'endersonmenezes/exam-escola-ti' && (github.event_name != 'issue_comment' || contains(github.event.comment.body, 'aplicar'))
+    name: Descobrir pasta do ano, aplicar e comentar na issue
+    # no-op no repositorio-template; em issue_comment, so roda para "/track"
+    # (o proprio script valida o nome) ou "aplicar" — demais comentarios sao
+    # ignorados aqui (e o script teria early-exit silencioso mesmo assim)
+    if: github.repository != 'endersonmenezes/exam-escola-ti' && (github.event_name != 'issue_comment' || contains(github.event.comment.body, '/track ') || contains(github.event.comment.body, 'aplicar'))
     runs-on: ubuntu-slim
     steps:
       - uses: actions/checkout@v7
