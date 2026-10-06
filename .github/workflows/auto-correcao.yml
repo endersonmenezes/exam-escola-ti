@@ -1,0 +1,163 @@
+name: Auto-correção — exam-escola-ti
+
+# Workflows sao do ESQUELETO (sempre os mesmos) e cada track LIGA/DESLIGA seus
+# jobs via lockfile track.json (vem na pasta do ano, overlay na raiz).
+# Sem lockfile = prova nao aplicada: tudo fica desligado (jobs "skipped").
+
+on:
+  push:
+  workflow_dispatch:
+    inputs:
+      inicio:
+        description: "Início da janela da prova (ISO, ex. 2026-10-12T19:00)"
+        required: false
+      fim:
+        description: "Fim da janela da prova (ISO)"
+        required: false
+
+permissions:
+  contents: read
+
+env:
+  REPO_SLUG: ${{ github.event.repository.name }}
+
+jobs:
+  config:
+    name: Lockfile da track (liga/desliga os jobs)
+    if: github.repository != 'endersonmenezes/exam-escola-ti'
+    runs-on: ubuntu-slim
+    outputs:
+      aplicada: ${{ steps.lock.outputs.aplicada }}
+      trampas: ${{ steps.lock.outputs.trampas }}
+      estrutura: ${{ steps.lock.outputs.estrutura }}
+      testes_publicos: ${{ steps.lock.outputs.testes_publicos }}
+      testes_escondidos: ${{ steps.lock.outputs.testes_escondidos }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: ler track.json (ver docs/TRACKS.md)
+        id: lock
+        run: |
+          echo "aplicada=$(python scripts/track_lock.py get aplicada)" >> "$GITHUB_OUTPUT"
+          echo "trampas=$(python scripts/track_lock.py get workflows.auto-correcao.trampas)" >> "$GITHUB_OUTPUT"
+          echo "estrutura=$(python scripts/track_lock.py get workflows.auto-correcao.estrutura)" >> "$GITHUB_OUTPUT"
+          echo "testes_publicos=$(python scripts/track_lock.py get workflows.auto-correcao.testes-publicos)" >> "$GITHUB_OUTPUT"
+          echo "testes_escondidos=$(python scripts/track_lock.py get workflows.auto-correcao.testes-escondidos)" >> "$GITHUB_OUTPUT"
+
+  trampas:
+    name: Trampas (identidade, autoria, janela, integridade)
+    needs: config
+    # anti-cola NAO e desligavel pela track: gate so na aplicacao. track.json
+    # da raiz e conferido contra o commit de aplicacao dentro do proprio job.
+    if: github.repository != 'endersonmenezes/exam-escola-ti' && needs.config.outputs.aplicada == 'true'
+    runs-on: ubuntu-slim
+    outputs:
+      zerado: ${{ steps.check.outputs.zerado }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - id: check
+        env:
+          CORRECAO_TOKEN: ${{ secrets.CORRECAO_TOKEN }}
+          TEMPLATE_REPO: ${{ vars.TEMPLATE_REPO }}
+          JANELA_INICIO: ${{ inputs.inicio }}
+          JANELA_FIM: ${{ inputs.fim }}
+        run: python scripts/check_trampas.py
+      - if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: result-trampas
+          path: result-trampas.json
+          if-no-files-found: ignore
+
+  estrutura:
+    name: Dockerfile + README (critérios funcionais de entrega)
+    needs: [config, trampas]
+    if: github.repository != 'endersonmenezes/exam-escola-ti' && always() && needs.config.outputs.estrutura == 'true' && needs.trampas.outputs.zerado != 'true'
+    runs-on: ubuntu-slim
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - run: python scripts/check_entrega.py
+      - if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: result-entrega
+          path: result-entrega.json
+          if-no-files-found: ignore
+
+  testes-publicos:
+    name: Testes públicos (suíte da track)
+    needs: [config, estrutura, trampas]
+    if: github.repository != 'endersonmenezes/exam-escola-ti' && needs.config.outputs.testes_publicos == 'true' && always() && needs.trampas.outputs.zerado != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: python3 -m pip install --quiet pytest
+      - name: build + sobe + pytest
+        run: |
+          set -o pipefail
+          bash scripts/rodar_testes.sh 2>&1 | tee pytest.log
+      - if: always()
+        run: python3 scripts/score_publicos.py
+      - if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: result-publicos
+          path: result-publicos.json
+          if-no-files-found: ignore
+
+  testes-escondidos:
+    name: Testes escondidos (via repo de correção)
+    needs: [config, estrutura, trampas]
+    if: github.repository != 'endersonmenezes/exam-escola-ti' && needs.config.outputs.testes_escondidos == 'true' && always() && needs.trampas.outputs.zerado != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: suite escondida
+        env:
+          CORRECAO_TOKEN: ${{ secrets.CORRECAO_TOKEN }}
+          CORRECAO_REPO: ${{ vars.CORRECAO_REPO }}
+        run: |
+          if [ -z "$CORRECAO_TOKEN" ] || [ -z "$CORRECAO_REPO" ]; then
+            echo "Sem CORRECAO_TOKEN/CORRECAO_REPO — testes escondidos NÃO executados (configurar no repositório)."
+            exit 0
+          fi
+          git clone --depth 1 "https://x-access-token:${CORRECAO_TOKEN}@github.com/${CORRECAO_REPO}.git" correcao
+          python3 correcao/run.py
+      - if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: result-escondidos
+          path: result-escondidos.json
+          if-no-files-found: ignore
+
+  nota:
+    name: Nota parcial
+    needs: [config, trampas, estrutura, testes-publicos, testes-escondidos]
+    if: github.repository != 'endersonmenezes/exam-escola-ti' && always() && needs.config.outputs.aplicada == 'true'
+    runs-on: ubuntu-slim
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - uses: actions/download-artifact@v8
+        with:
+          path: resultados
+          pattern: result-*
+          merge-multiple: true
+      - run: python scripts/nota.py resultados
+      - uses: actions/upload-artifact@v7
+        with:
+          name: nota
+          path: nota.json
+          if-no-files-found: ignore

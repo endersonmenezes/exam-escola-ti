@@ -1,0 +1,40 @@
+name: Preparar entrega (issue da prova)
+
+# "Sistema de prova": o aluno marca os checkboxes (ou comenta) na issue
+# "🎯 Preparar entrega" aberta pelo setup; este workflow valida a preparação
+# (ALUNO.md com RA, identidade, variante, FONTES.md) e responde na própria issue.
+
+on:
+  issues:
+    types: [edited, closed, reopened]
+  issue_comment:
+    types: [created]
+
+concurrency:
+  group: prova-bot-${{ github.repository }}
+  cancel-in-progress: false
+
+permissions:
+  issues: write
+  contents: write
+
+env:
+  REPO_SLUG: ${{ github.event.repository.name }}
+  REPO_FULL: ${{ github.repository }}
+  ISSUE_NUMBER: ${{ github.event.issue.number }}
+
+jobs:
+  preparar:
+    name: Validar preparação e responder na issue
+    # no-op no repositorio-template (issues de discussao do proprio repo)
+    if: github.repository != 'endersonmenezes/exam-escola-ti'
+    runs-on: ubuntu-slim
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: validar e responder (no-op se não for a issue da prova)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python scripts/preparar_entrega.py

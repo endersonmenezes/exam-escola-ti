@@ -1,0 +1,27 @@
+{
+  "track": "crud-fullstack",
+  "lockfile_version": 1,
+  "workflows": {
+    "auto-correcao.trampas": true,
+    "auto-correcao.estrutura": true,
+    "auto-correcao.testes-publicos": true,
+    "auto-correcao.testes-escondidos": true,
+    "auto-correcao.nota": true
+  },
+  "suites": {
+    "publicos": {
+      "path": "tests/public",
+      "runner": "scripts/rodar_testes.sh",
+      "pontos": 30
+    },
+    "escondidos": {
+      "via": "CORRECAO_REPO",
+      "pontos": 55
+    }
+  },
+  "recursos": {
+    "frontend": true,
+    "docker": true,
+    "variante": true
+  }
+}
