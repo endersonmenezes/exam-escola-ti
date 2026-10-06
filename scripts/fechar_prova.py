@@ -31,6 +31,7 @@ BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(BASE, "scripts"))
 from variante import pasta_do_ano  # noqa: E402
 import prova_issue  # noqa: E402
+import fontes  # noqa: E402
 
 TOKEN = os.environ.get("GH_TOKEN", "")
 REPO_FULL = os.environ.get("REPO_FULL", "")
@@ -203,17 +204,12 @@ def main():
                 criterios[c.get("criterio", "?")] = c.get("pontos", 0)
                 valor = (valor or 0) + c.get("pontos", 0)
 
-    # ---- fontes ----
-    presente = os.path.exists(os.path.join(BASE, "FONTES.md"))
-    declarou_vazio, links = False, 0
-    if presente:
-        texto = open(os.path.join(BASE, "FONTES.md"), encoding="utf-8",
-                     errors="replace").read()
-        linhas = texto.splitlines()
-        declarou_vazio = any(re.match(r"^\W{0,3}\s*Nenhum", l)
-                             and ("utilizada" in l.lower()
-                                  or "consultado" in l.lower()) for l in linhas)
-        links = len(re.findall(r"https?://\S+", texto))
+    # ---- fontes (mesma regra do teste publico test_05 — scripts/fontes.py):
+    # so contam URLs em linha de TABELA NUMERADA, deduplicadas; texto corrido
+    # e exemplos (ex.: https://docs.oracle.com do template) NAO contam.
+    f = fontes.analizar(os.path.join(BASE, "FONTES.md"))
+    fontes_d = {"presente": f["presente"], "declarou_vazio": f["declarou_vazio"],
+                "links": len(f["links"])}
 
     teacher = {
         "schema": 1,
@@ -236,8 +232,7 @@ def main():
                     "fora_da_janela": fora},
         "nota_parcial": {"valor": valor, "criterios": criterios},
         "auto_correcao": auto_correcao,
-        "fontes": {"presente": presente, "declarou_vazio": declarou_vazio,
-                   "links": links},
+        "fontes": fontes_d,
     }
 
     with open(os.path.join(BASE, "teacher.json"), "w", encoding="utf-8") as f:

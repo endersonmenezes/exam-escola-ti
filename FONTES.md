@@ -9,13 +9,18 @@
 
 ## 1. Sites / documentação consultados
 
+> [!NOTE]
+> **Só contam linhas numeradas da tabela** (`| 1 | <URL> | ...`). Links em
+> texto corrido — inclusive o exemplo logo abaixo — **não são contados**
+> como fonte declarada.
+
 | # | URL | O que foi consultado | Onde aparece no entregável |
 | --- | --- | --- | --- |
 | — | | | |
 
 *(Ex.: `https://docs.oracle.com/...` → sintaxe de `Optional` → `plan.md` na
-seção de decisões. Se nenhum site foi consultado, escreva: **"Nenhum site
-consultado."**)*
+seção de decisões. Esse link é ILUSTRATIVO — fora de linha numerada não
+conta. Se nenhum site foi consultado, escreva: **"Nenhum site consultado."**)*
 
 ## 2. Uso de IA — **somente como consulta**
 

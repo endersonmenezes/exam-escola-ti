@@ -31,9 +31,11 @@ env:
 jobs:
   preparar:
     name: Validar preparação e responder na issue
-    # no-op no repositorio-template (issues de discussao do proprio repo) e no
-    # fechamento da issue (quem reage ao close e o fechar-prova.yml)
-    if: github.repository != 'endersonmenezes/exam-escola-ti' && github.event.action != 'closed'
+    # no-op: repositorio-template; fechamento (quem reage ao close e o
+    # fechar-prova.yml); e comentarios que nao sejam comando atendido aqui
+    # (/track <nome>, /ajuda, --help) — /auto-correcao e conversa ficam em
+    # silencio total (a auto-correcao responde pela propria run)
+    if: github.repository != 'endersonmenezes/exam-escola-ti' && github.event.action != 'closed' && (github.event_name != 'issue_comment' || contains(github.event.comment.body, '/track ') || contains(github.event.comment.body, '/ajuda') || contains(github.event.comment.body, '--help'))
     runs-on: ubuntu-slim
     steps:
       - uses: actions/checkout@v7

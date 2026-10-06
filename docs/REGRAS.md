@@ -28,7 +28,10 @@
 
 ## Consulta permitida — rastreabilidade obrigatória
 
-- **Sites**: declare em `FONTES.md` (URL + o que usou + onde aparece).
+- **Sites**: declare em `FONTES.md` como **linha numerada da tabela**
+  (`| 1 | URL | o que usou | onde aparece |`). Links em texto corrido ou em
+  exemplos **não contam** — só a linha numerada é verificada (mesma regra no
+  CI e no `teacher.json`).
 - **IA como consulta**: conversa **compartilhada e pública**, link registrado
   em `FONTES.md` indicando onde o conteúdo foi usado. O professor pode exigir o
   link a qualquer momento; você deve saber explicar qualquer trecho.

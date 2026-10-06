@@ -14,7 +14,6 @@ trampas + entrega + estes testes publicos.
 import hashlib
 import json
 import os
-import re
 import sys
 import urllib.error
 import urllib.parse
@@ -22,6 +21,7 @@ import urllib.request
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "scripts"))
 from variante import parametros_ano, pasta_do_ano, slug_do_repo, variante  # noqa: E402
+from fontes import analizar  # noqa: E402
 
 RAIZ = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 SLUG = os.environ.get("REPO_SLUG", slug_do_repo())
@@ -107,14 +107,12 @@ def test_04_estrutura_src():
 
 
 def test_05_fontes():
-    """FONTES.md preenchido (com link) OU declarado explicitamente vazio."""
-    fontes = os.path.join(RAIZ, "FONTES.md")
-    assert os.path.exists(fontes), "FONTES.md ausente — restaure o do template"
-    linhas = open(fontes, encoding="utf-8", errors="replace").read().splitlines()
-    tem_link = any(re.match(r"^\|\s*\d", l) and re.search(r"https?://\S+", l) for l in linhas)
-    declarou_vazio = any(re.match(r"^\W{0,3}\s*Nenhum", l)
-                         and ("utilizada" in l.lower() or "consultado" in l.lower())
-                         for l in linhas)
-    assert tem_link or declarou_vazio, \
-        "FONTES.md ainda com placeholder — declare as fontes usadas OU escreva " \
-        "explicitamente que nada foi consultado (ex.: 'Nenhum site consultado.')"
+    """FONTES.md preenchido (URL em linha numerada da tabela) OU declarado
+    explicitamente vazio — MESMA regra do fechar_prova (scripts/fontes.py):
+    URLs em texto corrido/exemplo NÃO contam."""
+    fontes = analizar(os.path.join(RAIZ, "FONTES.md"))
+    assert fontes["presente"], "FONTES.md ausente — restaure o do template"
+    assert fontes["declarou_vazio"] or fontes["links"], \
+        "FONTES.md ainda com placeholder — declare cada fonte como linha " \
+        "numerada da tabela (| 1 | URL | ...) OU escreva explicitamente que " \
+        "nada foi consultado (ex.: 'Nenhum site consultado.')."

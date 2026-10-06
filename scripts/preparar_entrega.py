@@ -5,9 +5,11 @@ Valida a preparacao (ALUNO.md com RA, identidade, FONTES.md editado, variante)
 e — se a prova ja foi aplicada — a variante, e responde NA PROPRIA ISSUE
 (comentario; NAO fecha: o fechamento encerra a prova — ver fechar_prova.py).
 
-Comandos (comentarios na issue): `/track <nome>` (selecao, abaixo),
-`/ajuda`/`--help` (lista de comandos + lembrete do ciclo) e `/auto-correcao`
-(NAO gera estado aqui — sem spam; a auto-correcao responde pela propria run).
+ROTEAMENTO (v3.5): responde APENAS para (a) evento `issues: edited`,
+(b) comentario que case `/track <nome>` (selecao) ou (c) `/ajuda`/`--help`.
+Qualquer OUTRO comentario (`/auto-correcao`, conversa do aluno) e SILENCIO
+TOTAL — o bug do roteamento respondia a qualquer comentario repetindo a
+selecao do `.prova/track` atual.
 
 Selecao `/track <nome>` (issueops):
 - valida o nome contra as candidatas do template (scripts/selecao.py);
@@ -166,23 +168,27 @@ def main():
 
     identidade, prova = [], []
 
+    # ROTEAMENTO (v3.5): em issue_comment, so responde a /track <nome> ou
+    # /ajuda|--help — outros comentarios (/auto-correcao, conversa) sao
+    # SILENCIO TOTAL (a auto-correcao responde pela propria run; o bug era
+    # responder a qualquer comentario repetindo a selecao do .prova/track).
+    corpo = CORPO_COMENTARIO.strip()
+    if corpo:
+        m_track = re.match(r"(?i)^\s*/track\s+\S+", corpo)
+        eh_ajuda = "/ajuda" in corpo.lower() or "--help" in corpo.lower()
+        if not m_track and not eh_ajuda:
+            print("Comentario sem comando atendido pelo preparar — silencio total.")
+            return
+
     # 0) Selecao de track (issueops): feedback imediato + aplicacao em cadeia
     escolhida = selecionar_track(lock)
     if escolhida:
         prova.append("✅ track `%s` gravada em `.prova/track` — a aplicação foi "
                      "disparada (acompanhe por aqui)." % escolhida)
 
-    # comandos que NAO geram comentario de estado (sem spam):
-    # /ajuda responde a lista; /auto-correcao e atendido pela propria
-    # auto-correcao (issue_comment) — aqui e silencio para o estado.
-    corpo_l = CORPO_COMENTARIO.lower()
-    if "/ajuda" in corpo_l or "--help" in corpo_l:
+    if "/ajuda" in corpo.lower() or "--help" in corpo.lower():
         prova_issue.comentar(AJUDA)
         print("Resposta de /ajuda postada na issue #%s." % lock)
-        return
-    if "/auto-correcao" in corpo_l:
-        print("Comentario /auto-correcao — sem estado do preparar (a "
-              "auto-correcao responde pela propria run).")
         return
 
     # 1) ALUNO.md com RA — Fase 1 (Identidade)

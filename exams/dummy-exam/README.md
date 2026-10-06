@@ -77,6 +77,9 @@ seus valores; no `variante/params.json` eles aparecem assim:
 - **Não altere** `scripts/`, `.github/` ou `docs/` (conferido contra o
   template) nem `track.json`/`contrato.json`/`rubrica.json` depois da
   aplicação (conferido contra o commit de aplicação) — prova zerada.
+- **Vermelho no job de testes NÃO é quebra do sistema** — é o feedback
+  normal da correção: a nota sai mesmo assim (comentário na issue + Summary),
+  junto com o que falhou. Corrija e rode `/auto-correcao` de novo.
 
 ## Como esta prova-teste chegou aqui
 

@@ -88,9 +88,46 @@ with open(os.path.join(os.getcwd(), "nota.json"), "w", encoding="utf-8") as f:
                "fatal": fatal_geral, "observacoes": observacoes},
               f, ensure_ascii=False, indent=2)
 
-# replica a nota na issue unica da prova (upsert por marcador — nao spamma)
+# replica a nota na issue unica da prova (upsert por marcador — nao spamma).
+# O corpo do comentario carrega "Ultima atualizacao" (ISO + link da run) e um
+# historico cronologico dos disparos (ate 10 entradas) — o aluno enxerga que
+# e sempre o MESMO comentario editado. O fechar-prova faz parse da linha
+# "**Nota parcial:** N/100" — mantida intacta.
 try:
+    from datetime import datetime  # noqa: E402
     import prova_issue  # noqa: E402
-    prova_issue.atualizar_comentario("nota-parcial", "\n".join(linhas))
+
+    iso = datetime.now().astimezone().isoformat(timespec="seconds")
+    run_url = ""
+    if os.environ.get("GITHUB_RUN_ID") and os.environ.get("GITHUB_REPOSITORY"):
+        run_url = "%s/%s/actions/runs/%s" % (
+            os.environ.get("GITHUB_SERVER_URL", "https://github.com"),
+            os.environ["GITHUB_REPOSITORY"], os.environ["GITHUB_RUN_ID"])
+
+    anterior = None
+    n_issue = prova_issue.numero()
+    if n_issue and prova_issue.TOKEN and prova_issue.REPO_FULL:
+        status, comentarios = prova_issue._api(
+            "GET", "/repos/%s/issues/%s/comments?per_page=100"
+            % (prova_issue.REPO_FULL, n_issue))
+        if status == 200 and isinstance(comentarios, list):
+            for c in comentarios:
+                if (c.get("body") or "").startswith("<!-- nota-parcial -->"):
+                    anterior = c.get("body")
+                    break
+    historico = []
+    if anterior and "### Histórico" in anterior:
+        secao = anterior.split("### Histórico", 1)[1]
+        historico = [l for l in secao.splitlines() if l.strip().startswith("- ")]
+    entrada = "- %s · nota %d/100%s" % (
+        iso, nota, " · [run](%s)" % run_url if run_url else "")
+    historico = (historico + [entrada])[-10:]
+
+    texto_issue = "\n".join(
+        ["# Nota parcial — Auto-correção", "",
+         "**Última atualização:** %s%s" % (
+             iso, " · [ver run](%s)" % run_url if run_url else ""),
+         ""] + linhas[2:] + ["", "### Histórico"] + historico)
+    prova_issue.atualizar_comentario("nota-parcial", texto_issue)
 except Exception as e:
     print("comentario de nota na issue falhou (%s) — seguindo." % e)
