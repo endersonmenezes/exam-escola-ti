@@ -10,6 +10,10 @@ e ainda escreve o JSON no Step Summary.
 Se a prova nunca foi aplicada, gera o arquivo do mesmo jeito, com
 `"aplicada": false` + motivo — fechar sem aplicar e caso real.
 
+`aluno` traz login (dono do repo), RA e **nome** — o nome sai do campo
+`Nome:` de `ALUNO.md` (fallback: nome público da conta GitHub via API),
+para agilitar o lancamento de notas no sistema academico.
+
 GATE (v3.4): o fechamento exige que a auto-correção tenha rodado ao menos 1x
 — o GitHub não permite vetar o fechamento de issue, entao, se o marcador
 `<!-- nota-parcial -->` (upsert do nota.py) NÃO existir nos comentarios da
@@ -137,12 +141,23 @@ def main():
 
     # ---- aluno ----
     ra = None
+    nome = None
     aluno_path = os.path.join(BASE, "ALUNO.md")
     if os.path.exists(aluno_path):
-        m = re.search(r"RA\s*[:：]?\s*([0-9]{5,})",
-                      open(aluno_path, encoding="utf-8", errors="replace").read())
+        texto_aluno = open(aluno_path, encoding="utf-8", errors="replace").read()
+        m = re.search(r"RA\s*[:：]?\s*([0-9]{5,})", texto_aluno)
         if m:
             ra = m.group(1)
+        m_nome = re.search(r"^\s*Nome\s*[:：][ \t]*(.+?)[ \t]*$",
+                           texto_aluno, re.MULTILINE | re.IGNORECASE)
+        if m_nome:
+            candidato = m_nome.group(1).strip()
+            if candidato and "PREENCHER" not in candidato.upper():
+                nome = candidato
+    if not nome and not DRY_RUN and TOKEN and OWNER:
+        status, usuario = prova_issue._api("GET", "/users/%s" % OWNER)
+        if status == 200 and usuario.get("name"):
+            nome = usuario["name"].strip() or None
 
     # ---- variante ----
     variante_d = None
@@ -224,7 +239,7 @@ def main():
         "fechada_em": ISSUE_CLOSED_AT or gerado_em,
         "aplicada": aplicada,
         "motivo": motivo,
-        "aluno": {"login": OWNER or None, "ra": ra},
+        "aluno": {"login": OWNER or None, "ra": ra, "nome": nome},
         "variante": variante_d,
         "janela": {"minutos": minutos, "t0": t0 or None, "ultimo_push": ultimo_push},
         "commits": {"total": len(commits_aluno), "autores": autores,

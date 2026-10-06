@@ -17,6 +17,13 @@ Selecao `/track <nome>` (issueops):
   opcoes); e, se valido, grava `.prova/track` em commit de BOT e da PUSH —
   e o push dispara o aplicar-prova na hora (aplicacao em cadeia).
 
+UPSERT (v3.6): o comentario de estado ("Preparacao em dia/incompleta") e o
+ack de selecao (sandbox) sao EDITADOS no mesmo comentario (marcadores
+`<!-- preparacao -->` / `<!-- track-ack -->`) em vez de criados de novo —
+rajadas de `issues: edited` (varios checkboxes) disparam varios runs e o
+cancel-in-progress do concurrency pode nao impedir que dois scripts passem
+pela porta ao mesmo tempo (caso real: comentario duplicado no beta).
+
 FONTES.md: presente E EDITADO em relacao ao template (fetch `prova-template`,
 `git show FETCH_HEAD:FONTES.md`) — identico ao template gera alerta de edicao.
 
@@ -99,12 +106,14 @@ def selecionar_track(lock):
         return None
 
     if track_escolhida == os.path.basename(selecao.DUMMY):
-        prova_issue.comentar(
+        prova_issue.atualizar_comentario(
+            "track-ack",
             "✅ Track `%s` selecionada — colocando você em **modo sandbox** 🏖️ "
             "A prova-teste será aplicada neste repo em instantes (acompanhe "
             "por aqui)." % track_escolhida)
     else:
-        prova_issue.comentar(
+        prova_issue.atualizar_comentario(
+            "track-ack",
             "✅ Track `%s` selecionada — aplicando a prova neste repo em "
             "instantes." % track_escolhida)
 
@@ -251,8 +260,9 @@ def main():
                  "\n\n### Fase 2 — Prova\n\n" + "\n".join(prova) +
                  "\n\n### Próximo passo\n\n" + proximo + "\n\nBoa prova! 🚀")
 
-    prova_issue.comentar(corpo)
-    print("Respondido na issue #%s (%s)." % (lock, "ok" if not faltam else "pendencias"))
+    prova_issue.atualizar_comentario("preparacao", corpo)
+    print("Respondido (upsert) na issue #%s (%s)."
+          % (lock, "ok" if not faltam else "pendencias"))
 
 
 if __name__ == "__main__":
