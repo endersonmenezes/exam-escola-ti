@@ -53,10 +53,11 @@ repositório, então copiar de colega não funciona.
 ## Como esta prova-teste chegou aqui
 
 Esta pasta foi aplicada por overlay depois que **você selecionou a track**:
-na issue única "🎯 Prova" o comentário foi `/track dummy-exam` e, em seguida,
-"aplicar" — o sistema puxou esta pasta do template e ela virou a raiz do seu
-repo. Nas provas reais o passo é o mesmo: `/track <nome-da-pasta>` na issue
-(a seleção é **sempre obrigatória** — nada de aplicação automática).
+na issue única "🎯 Prova" o comentário foi `/track dummy-exam` — o sistema
+validou, respondeu na hora (modo sandbox 🏖️) e aplicou esta pasta
+automaticamente (o commit do bot que gravou sua seleção disparou a aplicação).
+Nas provas reais o passo é o mesmo: `/track <nome-da-pasta>` na issue (a
+seleção é **sempre obrigatória** — nada de aplicação automática sem escolha).
 
 ## Agora
 

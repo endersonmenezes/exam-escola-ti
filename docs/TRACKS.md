@@ -86,12 +86,16 @@ preencher seus `outputs`; os demais jobs consomem via
 > (`exams/dummy-exam/`, fora da hierarquia de ano — prova-teste) + as tracks
 > do **ano mais recente** (`exams/<ano>/<track>/`). A escolha é **sempre
 > explícita**: o aluno comenta `/track <nome-da-pasta>` na issue única "🎯 Prova"
-> (ex.: `/track crud-fullstack`, `/track dummy-exam`) — o workflow grava
-> `.prova/track` (commit de bot) e o *Aplicar prova* faz match pelo **nome da
-> pasta**. Sem seleção, a aplicação **trava de propósito** e comenta um
-> lembrete na própria issue (uma única vez — upsert + sentinela
-> `.prova/track-lembrete`), para não spammar a cada polling. Anos anteriores
-> ficam no histórico do repo (fora da `main`) e não entram na seleção.
+> (ex.: `/track crud-fullstack`, `/track dummy-exam`) — o *Preparar entrega*
+> valida o nome contra as candidatas (`scripts/selecao.py`), comenta o
+> feedback na hora (modo sandbox para o dummy) e grava `.prova/track` em
+> commit de bot; **o push desse commit dispara o *Aplicar prova*** — a
+> aplicação é consequência da seleção. Antes de qualquer seleção o
+> *Aplicar prova* é **no-op silencioso** (o gatilho push do repo não gera
+> barulho na criação); com `.prova/track` inválido ele trava e comenta um
+> lembrete na issue (uma única vez — upsert + sentinela `.prova/track-lembrete`).
+> Anos anteriores ficam no histórico do repo (fora da `main`) e não entram na
+> seleção.
 
 ## Como criar uma NOVA track (checklist para LLM/humano)
 

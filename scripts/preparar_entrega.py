@@ -1,11 +1,18 @@
 #!/usr/bin/env python3
 """Reage a edicoes/comentarios na ISSUE UNICA da prova (lock .prova/issue).
 
-Valida a preparacao (ALUNO.md com RA, identidade, FONTES.md) e — se a prova
-ja foi aplicada — a variante, e responde NA PROPRIA ISSUE (upsert de estado
-via comentario; NAO fecha: o fechamento encerra a prova — ver
-scripts/fechar_prova.py). Mantem o parse de `/track <nome>` que grava
-`.prova/track` (commit de bot).
+Valida a preparacao (ALUNO.md com RA, identidade, FONTES.md editado, variante)
+e — se a prova ja foi aplicada — a variante, e responde NA PROPRIA ISSUE
+(comentario; NAO fecha: o fechamento encerra a prova — ver fechar_prova.py).
+
+Selecao `/track <nome>` (issueops):
+- valida o nome contra as candidatas do template (scripts/selecao.py);
+- comenta o feedback NA HORA (modo sandbox para o dummy / erro listando as
+  opcoes); e, se valido, grava `.prova/track` em commit de BOT e da PUSH —
+  e o push dispara o aplicar-prova na hora (aplicacao em cadeia).
+
+FONTES.md: presente E EDITADO em relacao ao template (fetch `prova-template`,
+`git show FETCH_HEAD:FONTES.md`) — identico ao template gera alerta de edicao.
 
 No-op silencioso se a issue do evento nao for a da prova.
 """
@@ -21,11 +28,14 @@ BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(BASE, "scripts"))
 from variante import slug_do_repo, pasta_do_ano, variante  # noqa: E402
 import prova_issue  # noqa: E402
+import selecao  # noqa: E402
 
 TOKEN = os.environ.get("GH_TOKEN", "")
 REPO_FULL = os.environ.get("REPO_FULL", "")
 NUMERO = os.environ.get("ISSUE_NUMBER", "")
 REPO = os.environ.get("REPO_SLUG") or slug_do_repo()
+TEMPLATE_URL = os.environ.get(
+    "TEMPLATE_URL", "https://github.com/endersonmenezes/exam-escola-ti.git")
 
 
 def api(method, path, payload=None):
@@ -39,6 +49,82 @@ def api(method, path, payload=None):
             return r.status, json.loads(r.read() or b"{}")
     except urllib.error.HTTPError:
         return 0, {}
+
+
+def selecionar_track(lock):
+    """Parse de `/track <nome>` na issue: valida contra as candidatas do
+    template, comenta o feedback na hora e, se valido, grava .prova/track
+    (commit de bot + push — o push dispara o aplicar-prova). Retorna o nome
+    escolhido ou None (sem /track ou nome invalido)."""
+    status_c, comentarios = api("GET", "/repos/%s/issues/%s/comments?per_page=100"
+                                % (REPO_FULL, lock))
+    track_escolhida = None
+    if status_c == 200 and isinstance(comentarios, list):
+        for c in comentarios:
+            m = re.search(r"(?im)^\s*/track\s+([\w-]+)", c.get("body", "") or "")
+            if m:
+                track_escolhida = m.group(1)
+    if not track_escolhida:
+        return None
+
+    candidatas, nomes = [], [track_escolhida]
+    if selecao.fetch_template(TEMPLATE_URL):
+        candidatas = selecao.candidatas(selecao.pastas_publicadas("FETCH_HEAD"))
+        nomes = selecao.nomes(candidatas)
+    if candidatas and track_escolhida not in nomes:
+        prova_issue.comentar(
+            "⚠️ Track `%s` não encontrada. Disponíveis: %s — comente "
+            "`/track <nome>` novamente."
+            % (track_escolhida, ", ".join("`%s`" % n for n in nomes)))
+        return None
+
+    if track_escolhida == os.path.basename(selecao.DUMMY):
+        prova_issue.comentar(
+            "✅ Track `%s` selecionada — colocando você em **modo sandbox** 🏖️ "
+            "A prova-teste será aplicada neste repo em instantes (acompanhe "
+            "por aqui)." % track_escolhida)
+    else:
+        prova_issue.comentar(
+            "✅ Track `%s` selecionada — aplicando a prova neste repo em "
+            "instantes." % track_escolhida)
+
+    track_path = os.path.join(BASE, ".prova", "track")
+    atual = ""
+    if os.path.exists(track_path):
+        atual = open(track_path, encoding="utf-8").read().strip()
+    if atual != track_escolhida:
+        os.makedirs(os.path.dirname(track_path), exist_ok=True)
+        with open(track_path, "w", encoding="utf-8") as f:
+            f.write(track_escolhida + "\n")
+        for args in (["config", "user.name", "github-actions[bot]"],
+                     ["config", "user.email",
+                      "41898282+github-actions[bot]@users.noreply.github.com"],
+                     ["pull", "--rebase"],
+                     ["add", ".prova/track"],
+                     ["commit", "-m",
+                      "chore: track selecionada via issue (%s)" % track_escolhida],
+                     ["push"]):
+            subprocess.run(["git"] + args, cwd=BASE, capture_output=True)
+    return track_escolhida
+
+
+def checar_fontes():
+    """FONTES.md: ausente = ❌; presente e identico ao template = ⚠️ (edite);
+    presente e editado = ✅."""
+    fontes_path = os.path.join(BASE, "FONTES.md")
+    if not os.path.exists(fontes_path):
+        return "❌ `FONTES.md` ausente — restaure o do template."
+    editado = True
+    if selecao.fetch_template(TEMPLATE_URL):
+        remoto = selecao.git("show", "FETCH_HEAD:FONTES.md").stdout
+        if remoto:
+            local = open(fontes_path, encoding="utf-8", errors="replace").read()
+            editado = local != remoto
+    if editado:
+        return "✅ `FONTES.md` presente e editado (fontes declaradas ou vazio declarado)"
+    return ("⚠️ `FONTES.md` ainda idêntico ao do template — edite: declare as "
+            "fontes consultadas OU escreva explicitamente que nada foi "
+            "utilizado.")
 
 
 def main():
@@ -62,36 +148,11 @@ def main():
 
     ok = []
 
-    # 0) Selecao de track (issueops): comentario "/track <nome>" grava .prova/track
-    status_c, comentarios = api("GET", "/repos/%s/issues/%s/comments?per_page=100"
-                                % (REPO_FULL, lock))
-    track_escolhida = None
-    if status_c == 200:
-        for c in comentarios:
-            m = re.search(r"(?im)^\s*/track\s+([\w-]+)", c.get("body", ""))
-            if m:
-                track_escolhida = m.group(1)
-    if track_escolhida:
-        track_path = os.path.join(BASE, ".prova", "track")
-        atual = ""
-        if os.path.exists(track_path):
-            atual = open(track_path, encoding="utf-8").read().strip()
-        if atual != track_escolhida:
-            os.makedirs(os.path.dirname(track_path), exist_ok=True)
-            with open(track_path, "w", encoding="utf-8") as f:
-                f.write(track_escolhida + "\n")
-            subprocess.run(["git", "config", "user.name", "github-actions[bot]"],
-                           cwd=BASE, capture_output=True)
-            subprocess.run(["git", "config", "user.email",
-                            "41898282+github-actions[bot]@users.noreply.github.com"],
-                           cwd=BASE, capture_output=True)
-            subprocess.run(["git", "pull", "--rebase"], cwd=BASE, capture_output=True)
-            subprocess.run(["git", "add", ".prova/track"], cwd=BASE, capture_output=True)
-            subprocess.run(["git", "commit", "-m",
-                            "chore: track selecionada via issue (%s)" % track_escolhida],
-                           cwd=BASE, capture_output=True)
-            subprocess.run(["git", "push"], cwd=BASE, capture_output=True)
-        ok.append("✅ track `%s` gravada em `.prova/track`" % track_escolhida)
+    # 0) Selecao de track (issueops): feedback imediato + aplicacao em cadeia
+    escolhida = selecionar_track(lock)
+    if escolhida:
+        ok.append("✅ track `%s` gravada em `.prova/track` — a aplicação foi "
+                  "disparada (acompanhe por aqui)." % escolhida)
 
     # 1) ALUNO.md com RA
     aluno_path = os.path.join(BASE, "ALUNO.md")
@@ -111,11 +172,8 @@ def main():
     else:
         ok.append("❌ `.prova/id` ausente ou divergente — rode `python scripts/variante.py`.")
 
-    # 3) FONTES.md
-    if os.path.exists(os.path.join(BASE, "FONTES.md")):
-        ok.append("✅ `FONTES.md` presente")
-    else:
-        ok.append("❌ `FONTES.md` ausente — restaure o do template.")
+    # 3) FONTES.md presente E editado em relacao ao template
+    ok.append(checar_fontes())
 
     # 4) variante (só depois da aplicação)
     pasta = pasta_do_ano(BASE)
@@ -130,7 +188,7 @@ def main():
         else:
             ok.append("❌ `variante/params.json` ausente — rode `python scripts/variante.py`.")
     else:
-        ok.append("⏳ prova ainda não aplicada — a variante será validada no dia da prova")
+        ok.append("⏳ prova ainda não aplicada — a variante será validada na aplicação")
 
     faltam = [l for l in ok if l.startswith("❌")]
     if faltam:

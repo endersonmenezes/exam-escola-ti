@@ -4,15 +4,21 @@
 Gatilhos: schedule (polling a cada 10 min), push, issue_comment e
 workflow_dispatch. Idempotente via `.prova/aplicada-<pasta>`.
 
-Fluxo:
-  1. fetch do remote do template (repo publico — sem PAT);
-  2. monta as CANDIDATAS: o dummy permanente (`exams/dummy-exam/`, fora da
-     hierarquia de ano) + as tracks do ANO MAIS RECENTE (`exams/<ano>/<track>/`).
-     Selecao SEMPRE EXPLICITA pela marcacao `.prova/track` (NOME DA PASTA,
-     ex.: `crud-fullstack`, `dummy-exam`) — sem selecao a aplicacao TRAVA e
-     comenta o lembrete de `/track` NA issue da prova (upsert do comentario
-     `<!-- track-lembrete -->` + sentinela `.prova/track-lembrete`, para nao
-     spammar a cada polling);
+A aplicacao e CONSEQUENCIA da SELECAO (issueops): o workflow roda em todos
+esses gatilhos, mas **sem `.prova/track` ele nem comeca** — sys.exit(0)
+silencioso logo no inicio, sem fetch, sem comentario (o push de criacao do
+repo vira no-op quieto). Quando o aluno comenta `/track <nome>` na issue, o
+*Preparar entrega* grava `.prova/track` em commit de bot e da push — e e o
+PUSH DESSE COMMIT que dispara a aplicacao aqui, na hora.
+
+Fluxo (so roda com `.prova/track` presente):
+  1. fetch do remote do template (repo publico — sem PAT; o remote
+     `prova-template` e adicionado pelo sistema porque o repo gerado a
+     partir do template NAO e fork);
+  2. monta as CANDIDATAS (scripts/selecao.py): dummy permanente + ano mais
+     recente. Selecao SEMPRE EXPLICITA — `.prova/track` com nome que nao
+     bate TRAVA e comenta o lembrete na issue (upsert `<!-- track-lembrete -->`
+     + sentinela `.prova/track-lembrete`, para nao spammar a cada polling);
   3. se ainda nao aplicada: `git checkout <ref> -- <pasta>`, sentinela,
      commit do bot (esse commit ancora o t0 da janela — T4) e push;
   4. gera .prova/exam-dir + variante/params.json e COMENTA na issue unica da
@@ -22,7 +28,6 @@ DRY_RUN=1 so descobre a pasta (local ou remoto) sem commitar.
 """
 import json
 import os
-import re
 import shutil
 import subprocess
 import sys
@@ -33,6 +38,7 @@ BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(BASE, "scripts"))
 from variante import slug_do_repo, pasta_do_ano, variante  # noqa: E402
 import prova_issue  # noqa: E402
+import selecao  # noqa: E402
 
 TOKEN = os.environ.get("GH_TOKEN", "")
 REPO_FULL = os.environ.get("REPO_FULL", "")
@@ -40,8 +46,6 @@ REPO = os.environ.get("REPO_SLUG") or slug_do_repo()
 TEMPLATE_URL = os.environ.get(
     "TEMPLATE_URL", "https://github.com/endersonmenezes/exam-escola-ti.git")
 DRY_RUN = os.environ.get("DRY_RUN", "") == "1"
-DUMMY = "exams/dummy-exam"  # prova-teste PERMANENTE, fora da hierarquia de ano
-REMOTE = "prova-template"
 
 
 def git(*args):
@@ -62,17 +66,6 @@ def api(method, path, payload=None):
         return 0, {}
 
 
-def pastas_do_ano_na(ref: str):
-    """Pastas de prova publicadas numa ref: o dummy permanente
-    (`exams/dummy-exam/`) + as tracks dos anos (`exams/<ano>/<track>/`)."""
-    r = git("ls-tree", "-r", "--name-only", ref)
-    pastas = {m.group(1)
-              for m in re.finditer(r"^(exams/\d{4}/[^/]+)/", r.stdout, re.M)}
-    if re.search(r"^exams/dummy-exam/", r.stdout, re.M):
-        pastas.add(DUMMY)
-    return sorted(pastas)
-
-
 def main():
     # 0) este script so faz sentido DENTRO de um repositorio git (o do aluno)
     if git("rev-parse", "--is-inside-work-tree").stdout.strip() != "true":
@@ -83,42 +76,36 @@ def main():
         print("Repositorio-template — nao e uma prova; no-op.")
         return
 
+    # v3.1: aplicacao e consequencia da SELECAO (issueops). Sem .prova/track
+    # (repo acabou de ser criado, p.ex.) e no-op SILENCIOSO — nem fetch, nem
+    # comentario. O push do bot que grava .prova/track (preparar_entrega.py)
+    # e que dispara a aplicacao na hora.
+    if not os.path.exists(os.path.join(BASE, ".prova", "track")):
+        sys.exit(0)
+
     # 1) remote + fetch (repo publico; GITHUB_TOKEN do proprio repo basta)
-    git("remote", "remove", REMOTE)
-    git("remote", "add", REMOTE, TEMPLATE_URL)
-    r = git("fetch", "--depth", "1", REMOTE, "main")
-    if r.returncode != 0:
-        print("Template ainda nao acessivel (%s):" % TEMPLATE_URL, r.stderr.strip())
+    if not selecao.fetch_template(TEMPLATE_URL):
+        print("Template ainda nao acessivel (%s)." % TEMPLATE_URL)
         return
 
-    pastas = pastas_do_ano_na("FETCH_HEAD")
+    pastas = selecao.pastas_publicadas("FETCH_HEAD")
     if not pastas:
         print("Nenhuma pasta de prova publicada no template ainda.")
         return
 
-    # 2) candidatas = dummy permanente + tracks do ANO MAIS RECENTE. Selecao
-    #    SEMPRE explicita pela marcacao .prova/track (NOME DA PASTA); sem
-    #    selecao trava e lembra UMA vez na issue (upsert + sentinela).
-    anos = sorted({p.split("/")[1] for p in pastas
-                   if re.match(r"exams/\d{4}/", p)})
-    ano = anos[-1] if anos else ""
-    candidatas = sorted(p for p in pastas
-                        if p == DUMMY or (ano and p.split("/")[1] == ano))
-    track_marcada = ""
-    track_path = os.path.join(BASE, ".prova", "track")
-    if os.path.exists(track_path):
-        track_marcada = open(track_path, encoding="utf-8").read().strip()
+    # 2) candidatas = dummy permanente + tracks do ANO MAIS RECENTE (selecao.py).
+    #    .prova/track existe (early exit acima) — nome que nao bate TRAVA e
+    #    lembra UMA vez na issue (upsert + sentinela).
+    candidatas = selecao.candidatas(pastas)
+    track_marcada = open(os.path.join(BASE, ".prova", "track"),
+                         encoding="utf-8").read().strip()
     escolhidas = [p for p in candidatas
-                  if track_marcada and os.path.basename(p) == track_marcada]
+                  if os.path.basename(p) == track_marcada]
     if not escolhidas:
-        opcoes = [("%s (prova-teste)" % p) if p == DUMMY else p
+        opcoes = [("%s (prova-teste)" % p) if p == selecao.DUMMY else p
                   for p in candidatas]
-        if track_marcada:
-            print("Track '%s' nao encontrada entre as candidatas: %s."
-                  % (track_marcada, ", ".join(opcoes)))
-        else:
-            print("Track nao selecionada (selecao obrigatoria). Candidatas: %s."
-                  % ", ".join(opcoes))
+        print("Track '%s' nao encontrada entre as candidatas: %s."
+              % (track_marcada, ", ".join(opcoes)))
         if not DRY_RUN:
             texto_issue = (
                 "⚠️ **Seleção da track obrigatória.** Candidatas: %s.\n\n"

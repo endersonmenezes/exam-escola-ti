@@ -14,9 +14,10 @@
 >    qualquer ano.
 > 2. **Nunca aplicada sozinha** — a seleção é **sempre explícita**:
 >    `/track dummy-exam` na issue única "🎯 Prova" é a escolha de teste do
->    aluno/professor. Sem seleção a aplicação trava com um lembrete na issue
->    (uma única vez), então o dummy não pode ser aplicado por engano no dia
->    de uma prova real.
+>    aluno/professor; a aplicação acontece automaticamente em seguida (o push
+>    do bot da seleção dispara o aplicar). Sem seleção o aplicar é no-op
+>    silencioso; nome inválido gera lembrete na issue (uma única vez) — o
+>    dummy não pode ser aplicado por engano no dia de uma prova real.
 > 4. **Anos antigos acumulam no histórico** — pastas `exams/<ano>/` de anos
 >    anteriores ficam no histórico do repo para consulta; fora da `main`, não
 >    entram na seleção (só o ano mais recente + o dummy são candidatos).

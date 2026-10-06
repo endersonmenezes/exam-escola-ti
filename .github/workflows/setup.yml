@@ -18,10 +18,11 @@ permissions:
 env:
   REPO_SLUG: ${{ github.event.repository.name }}
   REPO_FULL: ${{ github.repository }}
+  TEMPLATE_URL: ${{ vars.TEMPLATE_URL || 'https://github.com/endersonmenezes/exam-escola-ti.git' }}
 
 jobs:
   bootstrap:
-    name: Gerar variante, ALUNO.md e issue de preparação
+    name: Setup — identidade, ALUNO.md, README e issue única 🎯 Prova
     # O repositorio-template nao e uma prova: workflows no-op la dentro
     if: github.repository != 'endersonmenezes/exam-escola-ti'
     runs-on: ubuntu-slim

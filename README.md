@@ -82,6 +82,9 @@ raiz, que é o handshake de entrega para a esteira de correção do professor
 - **Janela auto-ancorada**: a trampa T4 mede a janela a partir do commit
   "aplicar prova" + `janela_minutos` da rubrica — enforcement e divulgação
   usam o mesmo valor (a issue da prova divulga os minutos reais; dummy: 120).
+- **Não é fork**: o repo gerado a partir do template **não tem vínculo de
+  fork** com ele — por isso o sistema adiciona o remote `prova-template` e
+  faz fetch/checkout no momento da listagem (setup/preparar) e da aplicação.
 - **Idempotência**: sentinela `.prova/aplicada-<pasta>` — o bot nunca aplica
   duas vezes.
 - **Variante por repositório**: `scripts/variante.py` deriva os parâmetros do
@@ -130,8 +133,8 @@ nenhuma configuração extra).
 
 > 🎓 **Quer ver como funciona antes da prova?** Gere o seu repo a partir do
 > template e siga o ciclo: na issue única "🎯 Prova", selecione a prova-teste
-> com `/track dummy-exam` (a seleção é **sempre obrigatória**) e depois
-> comente "aplicar".
+> com `/track dummy-exam` (a seleção é **sempre obrigatória**) — a prova é
+> **aplicada automaticamente em seguida** (modo sandbox).
 
 O `exams/dummy-exam/` é uma prova de teste de primeira classe **e permanente**:
 serve para validar o sistema e treinar o ciclo de entrega em qualquer ano,
@@ -139,14 +142,16 @@ publicada na `main` o tempo todo, fora da hierarquia de ano.
 
 **Seleção:** candidatas são o dummy + as tracks do ano vigente, e a escolha é
 **sempre explícita**: comente `/track <nome>` na issue — `/track dummy-exam`
-escolhe a prova-teste. Sem seleção, a aplicação trava (com um lembrete na
-própria issue) — assim o dummy nunca é aplicado por engano no dia de uma
-prova real.
+escolhe a prova-teste. Sem seleção, a aplicação **nem dispara** (no-op
+silencioso); nome inválido trava com lembrete na própria issue. A aplicação é
+**consequência da seleção**: o commit do bot que grava `.prova/track` dispara
+o *Aplicar prova* na hora — assim o dummy nunca é aplicado por engano no dia
+de uma prova real.
 
 **Teste A — professor/dono do template (você está em `endersonmenezes/`):**
-1. Crie um repo de teste: `gh repo create prova-teste-meu-login --template endersonmenezes/exam-escola-ti --private` (ou o botão "Use this template").
-2. O `setup.yml` roda sozinho: `ALUNO.md` + a **issue única "🎯 Prova"** (lock `.prova/issue`). Complete o RA, marque os checkboxes — *Preparar entrega* responde na issue.
-3. Comente `/track dummy-exam` e depois "aplicar" na issue (ou aguarde o polling de 10 min): o *Aplicar prova* faz o overlay do dummy — `contrato.json` na raiz, README novo, `tests/public/` —, commita (t0 da janela) e comenta na própria issue com a sua variante.
+1. Crie um repo de teste: `gh repo create prova-teste-meu-login --template endersonmenezes/exam-escola-ti --private` (ou o botão "Use this template"). O setup roda sozinho no push de criação: identidade, `ALUNO.md` e `README.md` com o botão "🎯 Iniciar a prova", e a **issue única "🎯 Prova"** (lock `.prova/issue`).
+2. Complete o RA em `ALUNO.md` e marque os checkboxes na issue — *Preparar entrega* valida e responde na issue.
+3. Comente `/track dummy-exam` na issue: o sistema valida, responde na hora e **aplica a prova-teste automaticamente** (overlay — `contrato.json` na raiz, README novo, `tests/public/` —, commit do bot = t0 da janela, comentário com a sua variante). Comentar "aplicar" na issue também força, se quiser antecipar.
 4. Implemente algo em `src/` + `Dockerfile`, dê push — *Auto-correção* roda com a janela ancorada e a nota sai no Summary **e em comentário na issue**.
 5. Feche a issue "🎯 Prova" — o *Fechar prova* gera o `teacher.json` na raiz (handshake de entrega).
 
