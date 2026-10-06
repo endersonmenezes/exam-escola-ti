@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
-"""Reage a edicoes/comentarios na issue "Preparar entrega" do aluno.
+"""Reage a edicoes/comentarios na ISSUE UNICA da prova (lock .prova/issue).
 
 Valida a preparacao (ALUNO.md com RA, identidade, FONTES.md) e — se a prova
-ja foi aplicada — a variante. Responde na propria issue e fecha quando verde.
+ja foi aplicada — a variante, e responde NA PROPRIA ISSUE (upsert de estado
+via comentario; NAO fecha: o fechamento encerra a prova — ver
+scripts/fechar_prova.py). Mantem o parse de `/track <nome>` que grava
+`.prova/track` (commit de bot).
 
-No-op silencioso se a issue editada nao for a issue da prova.
+No-op silencioso se a issue do evento nao for a da prova.
 """
 import json
 import os
@@ -17,6 +20,7 @@ import urllib.request
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(BASE, "scripts"))
 from variante import slug_do_repo, pasta_do_ano, variante  # noqa: E402
+import prova_issue  # noqa: E402
 
 TOKEN = os.environ.get("GH_TOKEN", "")
 REPO_FULL = os.environ.get("REPO_FULL", "")
@@ -42,19 +46,25 @@ def main():
         print("Repositorio-template — nao e uma prova; no-op.")
         return
 
-    if not TOKEN or not REPO_FULL or not NUMERO:
-        print("Sem GH_TOKEN/REPO_FULL/ISSUE_NUMBER — nada a fazer.")
+    lock = prova_issue.numero()
+    if lock is None:
+        print("Lock .prova/issue ausente (setup nao rodou?) — no-op.")
         return
-    status, issue = api("GET", "/repos/%s/issues/%s" % (REPO_FULL, NUMERO))
-    if status != 200 or not issue.get("title", "").startswith("🎯"):
-        print("Nao e a issue da prova — no-op.")
-        return
+    if NUMERO:
+        try:
+            if int(NUMERO) != lock:
+                print("Nao e a issue da prova (evento #%s != lock #%s) — no-op."
+                      % (NUMERO, lock))
+                return
+        except ValueError:
+            print("ISSUE_NUMBER invalido (%s) — no-op." % NUMERO)
+            return
 
     ok = []
 
     # 0) Selecao de track (issueops): comentario "/track <nome>" grava .prova/track
     status_c, comentarios = api("GET", "/repos/%s/issues/%s/comments?per_page=100"
-                                % (REPO_FULL, NUMERO))
+                                % (REPO_FULL, lock))
     track_escolhida = None
     if status_c == 200:
         for c in comentarios:
@@ -127,16 +137,13 @@ def main():
         corpo = ("🔎 **Preparação incompleta**:\n\n" + "\n".join(ok)
                  + "\n\nResolva os ❌ e marque os checkboxes de novo; eu revalido. 💪")
     else:
-        corpo = ("✅ **Tudo certo por aqui!**\n\n" + "\n".join(ok)
+        corpo = ("✅ **Preparação em dia!**\n\n" + "\n".join(ok)
                  + "\n\nQuando a prova for aplicada (commit *aplicar prova*), a "
-                   "janela de **1h30** começa a contar. Boa prova! 🚀")
+                   "janela definida na rubrica começa a contar. Para escolher a "
+                   "track, comente `/track <nome>` aqui. Boa prova! 🚀")
 
-    api("POST", "/repos/%s/issues/%s/comments" % (REPO_FULL, NUMERO),
-        {"body": corpo})
-    if not faltam and issue.get("state") == "open" and pasta:
-        api("PATCH", "/repos/%s/issues/%s" % (REPO_FULL, NUMERO),
-            {"state": "closed"})
-    print("Respondido na issue #%s (%s)." % (NUMERO, "ok" if not faltam else "pendencias"))
+    prova_issue.comentar(corpo)
+    print("Respondido na issue #%s (%s)." % (lock, "ok" if not faltam else "pendencias"))
 
 
 if __name__ == "__main__":

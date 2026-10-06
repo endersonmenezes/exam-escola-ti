@@ -26,8 +26,8 @@
 Três camadas num único repositório **público**:
 
 1. **Esqueleto ano-agnóstico** (sempre público): workflows (`setup`,
-   `preparar-entrega`, `aplicar-prova`, `auto-correção`), scripts base,
-   `docs/REGRAS.md`, `docs/TRACKS.md`, `FONTES.md`, READMEs.
+   `preparar-entrega`, `aplicar-prova`, `auto-correção`, `fechar-prova`),
+   scripts base, `docs/REGRAS.md`, `docs/TRACKS.md`, `FONTES.md`, READMEs.
 2. **Tracks** (sempre públicas e estáveis): o *tipo* de prova — originadas da
    disciplina em `talks/courses/escola-de-ti` (SDD, debugging, CRUD fullstack).
    O template traz a **prova-teste dummy** (`exams/dummy-exam/` — hello world
@@ -59,20 +59,25 @@ Três camadas num único repositório **público**:
 
 ```mermaid
 flowchart TD
-    A["Antes da prova (a qualquer momento)<br/>Aluno gera o repo a partir do template<br/>(pode treinar o ciclo com o dummy)"] --> B["setup.yml roda sozinho<br/>ALUNO.md preenchido pela conta GitHub<br/>+ issue 🎯 Preparar entrega"]
-    B --> C["Aluno preenche RA e marca checkboxes<br/>preparar-entrega.yml valida e responde na issue"]
-    D["Dia da prova<br/>Professor publica exams/&lt;ano&gt;/&lt;track&gt;/ na main do template"] --> E["aplicar-prova.yml<br/>gatilhos: schedule · push · comentário 'aplicar'"]
-    E -->|"git fetch do template (público, sem PAT)"| F["Overlay: a track vira a raiz do repo<br/>README, contrato.json, rubrica.json,<br/>track.json, stubs, tests_publicos"]
-    F --> G["Commit do bot = t0 da janela<br/>variante gerada por repo +<br/>issue 📝 Prova aplicada"]
-    G --> H["Aluno desenvolve e dá push<br/>dentro da janela (divulgação:<br/>janela_minutos da rubrica)"]
-    H --> I["auto-correcao.yml<br/>lockfile track.json liga os jobs"]
-    I --> J["Nota parcial no Summary<br/>(suíte escondida: correção<br/>fora do CI do aluno)"]
+    A["Antes da prova (a qualquer momento)<br/>Aluno gera o repo a partir do template<br/>(pode treinar o ciclo com o dummy)"] --> B["setup.yml — ISSUE UNICA 🎯 Prova<br/>ALUNO.md + .prova/issue (lock)<br/>+ checklist de preparação"]
+    B --> C["Aluno prepara: RA, checkboxes<br/>preparar-entrega.yml comenta<br/>o estado na própria issue"]
+    C --> D["Aluno SELECIONA a track:<br/>/track &lt;nome&gt; na issue (obrigatório)<br/>/track dummy-exam = prova-teste"]
+    D --> E["Dia da prova: professor publica<br/>exams/&lt;ano&gt;/&lt;track&gt;/ na main do template"]
+    E --> F["aplicar-prova.yml: overlay + commit<br/>do bot (t0 da janela) + COMENTÁRIO<br/>na issue (pasta, janela, variante)"]
+    F --> G["Aluno desenvolve e dá push<br/>dentro da janela"]
+    G --> H["auto-correcao.yml — nota parcial<br/>no Summary E em comentário<br/>upsert de nota na issue"]
+    H --> I["ALUNO FECHA A ISSUE 🎯 Prova<br/>= encerra a prova"]
+    I --> J["fechar-prova.yml — teacher.json<br/>(schema 1) na raiz, commit do bot"]
+    J --> K["(fora do repo) esteira do teacher:<br/>suíte escondida + feedback<br/>devolvido na issue do aluno"]
 ```
 
 No dia da prova real, o professor publica `exams/<ano>/<track>/` e **só a
-prova real é aplicada**: o dummy permanece publicado, mas com provas reais ao
-lado há várias candidatas — a aplicação trava até a seleção explícita via
-`/track` na issue, então o dummy não pode ser aplicado por engano.
+prova real é aplicada**: a seleção é sempre explícita (`/track` na issue), e
+com provas reais publicadas o dummy continua sendo só mais uma candidata —
+nunca aplicado por engano. A prova se encerra quando **o aluno fecha a issue
+🎯 Prova**: o workflow *Fechar prova* gera o `teacher.json` (schema 1) na
+raiz, que é o handshake de entrega para a esteira de correção do professor
+(repo privado `teacher-escola-ti`).
 
 - **Janela auto-ancorada**: a trampa T4 mede a janela a partir do commit
   "aplicar prova" + `janela_minutos` da rubrica — enforcement e divulgação
@@ -124,31 +129,31 @@ nenhuma configuração extra).
 ## Testar o ciclo completo (dummy)
 
 > 🎓 **Quer ver como funciona antes da prova?** Gere o seu repo a partir do
-> template e siga o ciclo: quando o dummy for a única prova publicada, ele é
-> aplicado automaticamente; quando houver provas reais publicadas, selecione
-> com `/track dummy-exam` na issue "🎯 Preparar entrega".
+> template e siga o ciclo: na issue única "🎯 Prova", selecione a prova-teste
+> com `/track dummy-exam` (a seleção é **sempre obrigatória**) e depois
+> comente "aplicar".
 
 O `exams/dummy-exam/` é uma prova de teste de primeira classe **e permanente**:
 serve para validar o sistema e treinar o ciclo de entrega em qualquer ano,
 publicada na `main` o tempo todo, fora da hierarquia de ano.
 
-**Seleção:** candidatas são o dummy + as tracks do ano vigente. Com apenas o
-dummy publicado, a aplicação dele é **implícita** (cenário de teste). Com
-provas reais publicadas ao lado (várias candidatas), a aplicação **trava de
-propósito** até o `/track` na issue — `/track dummy-exam` escolhe a
-prova-teste. Assim o dummy nunca é aplicado por engano no dia de uma prova
-real.
+**Seleção:** candidatas são o dummy + as tracks do ano vigente, e a escolha é
+**sempre explícita**: comente `/track <nome>` na issue — `/track dummy-exam`
+escolhe a prova-teste. Sem seleção, a aplicação trava (com um lembrete na
+própria issue) — assim o dummy nunca é aplicado por engano no dia de uma
+prova real.
 
 **Teste A — professor/dono do template (você está em `endersonmenezes/`):**
 1. Crie um repo de teste: `gh repo create prova-teste-meu-login --template endersonmenezes/exam-escola-ti --private` (ou o botão "Use this template").
-2. O `setup.yml` roda sozinho: `ALUNO.md` + issue "🎯 Preparar entrega". Complete o RA, marque os checkboxes — *Preparar entrega* responde na issue.
-3. Comente "aplicar" na issue (ou aguarde o polling de 10 min): o *Aplicar prova* faz o overlay do dummy — `contrato.json` na raiz, README novo, `tests/public/` —, commita (t0 da janela) e abre a issue "📝 Prova aplicada" com a sua variante.
-4. Implemente algo em `src/` + `Dockerfile`, dê push — *Auto-correção* roda com a janela ancorada e a nota sai no Summary.
+2. O `setup.yml` roda sozinho: `ALUNO.md` + a **issue única "🎯 Prova"** (lock `.prova/issue`). Complete o RA, marque os checkboxes — *Preparar entrega* responde na issue.
+3. Comente `/track dummy-exam` e depois "aplicar" na issue (ou aguarde o polling de 10 min): o *Aplicar prova* faz o overlay do dummy — `contrato.json` na raiz, README novo, `tests/public/` —, commita (t0 da janela) e comenta na própria issue com a sua variante.
+4. Implemente algo em `src/` + `Dockerfile`, dê push — *Auto-correção* roda com a janela ancorada e a nota sai no Summary **e em comentário na issue**.
+5. Feche a issue "🎯 Prova" — o *Fechar prova* gera o `teacher.json` na raiz (handshake de entrega).
 
 **Teste B — professor com fork (provar o sistema de ponta a ponta):**
 1. Fork deste repo e registre a var `TEMPLATE_URL` apontando para **o seu fork**
    (Settings → Secrets and variables → Actions → Variables).
-2. Em um repo gerado a partir do **seu fork**, siga os passos 2–4 do Teste A.
+2. Em um repo gerado a partir do **seu fork**, siga os passos 2–5 do Teste A.
 3. O overlay vai puxar a pasta do ano da **sua** `main` — publique
    `exams/<ano>/<track>/` lá quando quiser simular o dia da prova, e observe o
    `aplicar-prova` disparar sozinho (ou force com "aplicar" na issue).
@@ -167,18 +172,21 @@ real.
 
 ```
 ├── .github/workflows/    setup, preparar-entrega, aplicar-prova, auto-correção,
+│                         fechar-prova (aluno fecha a issue -> teacher.json),
 │                         validar-exams (só no template — valida exams/ a cada push)
 ├── scripts/
 │   ├── variante.py       parâmetros da prova por nome de repo (lê contrato.json)
-│   ├── setup_prova.py    bootstrap (ALUNO.md + issue "Preparar entrega")
+│   ├── prova_issue.py    helper da issue única "🎯 Prova" (lock .prova/issue)
+│   ├── setup_prova.py    bootstrap (ALUNO.md + issue única + lock .prova/issue)
 │   ├── preparar_entrega.py  valida a preparação e responde na issue
-│   ├── aplicar_prova.py  descobre a pasta do ano, faz o overlay e abre a issue
+│   ├── aplicar_prova.py  selecao /track, overlay e comentário na issue
+│   ├── fechar_prova.py   fecha a prova: gera teacher.json (schema 1) na raiz
 │   ├── track_lock.py     lockfile track.json (liga/desliga jobs, CLI get/show/check)
 │   ├── check_trampas.py  T2/T3/T4/T5 — identidade, autoria, janela, integridade
 │   ├── check_entrega.py  critérios de entrega (Dockerfile, README)
 │   ├── rodar_testes.sh   build + sobe o container + pytest (testes públicos)
 │   ├── score_publicos.py pontua o pytest a partir do log (peso da rubrica)
-│   ├── nota.py           agrega result-*.json em nota.json + Step Summary
+│   ├── nota.py           agrega result-*.json + Summary + comentário de nota
 │   └── validar_exams.py  valida as pastas de exams/ (schema, colisões, tipos)
 ├── docs/REGRAS.md        regras comuns (nota, janela, fontes, zeramento)
 ├── docs/TRACKS.md        lockfile track.json + guia de nova track (para LLM)

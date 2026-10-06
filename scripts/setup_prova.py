@@ -7,7 +7,9 @@ reconhece pelo arquivo-sentinela `.prova/setup-done`.
 
 Versao exam-escola-ti (template unico): NAO gera variante aqui — a prova
 ( pasta do ano com os parametros) so existe no dia da prova, aplicada por
-`aplicar_prova.py`. O setup cria apenas identidade + ALUNO.md + issue.
+`aplicar_prova.py`. O setup cria apenas identidade + ALUNO.md + a ISSUE UNICA
+da prova ("🎯 Prova", numero gravado em `.prova/issue` — lock que todos os
+workflows usam para comentar na issue certa).
 
 DRY_RUN=1 executa localmente sem API/push (para teste).
 """
@@ -81,11 +83,44 @@ def main():
                     "dono do repositorio. Confira o nome e complete o RA.\n"
                     % (nome_conta, login))
 
-    # 3) sentinela
+    # 3) ISSUE UNICA da prova — criada ANTES do commit para o lock
+    #    .prova/issue entrar no mesmo commit do bot.
+    numero_issue = None
+    if DRY_RUN or not TOKEN:
+        print("DRY_RUN — issue nao criada.")
+    else:
+        api("POST", "/repos/%s/labels" % REPO_FULL,
+            {"name": "prova", "color": "1d76db", "description": "Issue oficial da prova"})
+        corpo = """## Checklist do aluno
+
+- [ ] Meu `ALUNO.md` esta com **Nome e RA** corretos (o bot preencheu o nome pela sua conta GitHub — confira!)
+- [ ] Li as [regras comuns](docs/REGRAS.md) e sei o que precisa declarar em `FONTES.md`
+- [ ] Sei que a pasta da prova ainda nao foi publicada — quando o professor publicar, o bot puxa a pasta escolhida (`exams/<ano>/<track>/`, ou a prova-teste `dummy-exam`) e ela **vira meu repositorio** (README, contrato e testes novos); o relogio da janela comeca no commit de aplicacao
+- [ ] Confirmo que vou entregar com commits **dentro da janela** contada a partir desse commit de aplicacao
+
+## Selecao da track (obrigatoria)
+
+Quando a prova estiver publicada no template, comente `/track <nome-da-pasta>` **nesta issue** para escolher qual prova aplicar (ex.: `/track crud-fullstack`). Para treinar o ciclo com a prova-teste: `/track dummy-exam`.
+
+Ao marcar as caixas (ou comentar), o workflow **Preparar entrega** valida e responde aqui. A prova se encerra quando **voce fechar esta issue** — nesse momento o sistema gera o `teacher.json` de entrega. Duvidas? Comente aqui.
+"""
+        status, issue = api("POST", "/repos/%s/issues" % REPO_FULL,
+                            {"title": "🎯 Prova", "body": corpo,
+                             "labels": ["prova"]})
+        if status == 201:
+            numero_issue = issue["number"]
+            with open(os.path.join(BASE, ".prova", "issue"), "w",
+                      encoding="utf-8") as f:
+                f.write("%d\n" % numero_issue)
+            print("Issue #%d criada (lock .prova/issue)." % numero_issue)
+        else:
+            print("Falha ao criar issue (status %d)." % status)
+
+    # 4) sentinela
     with open(sentinela, "w", encoding="utf-8") as f:
         f.write("ok\n")
 
-    # 4) commit + push como bot
+    # 5) commit + push como bot (inclui ALUNO.md, .prova/id e .prova/issue)
     git("config", "user.name", "github-actions[bot]")
     git("config", "user.email",
         "41898282+github-actions[bot]@users.noreply.github.com")
@@ -100,36 +135,17 @@ def main():
             if r.returncode != 0:
                 print("push falhou (continuando):", r.stderr)
 
-    # 5) issue "Preparar entrega"
-    if DRY_RUN or not TOKEN:
-        print("DRY_RUN — issue nao criada.")
-        return
-
-    api("POST", "/repos/%s/labels" % REPO_FULL,
-        {"name": "prova", "color": "1d76db", "description": "Issue oficial da prova"})
-    corpo = """## Checklist do aluno
-
-- [ ] Meu `ALUNO.md` esta com **Nome e RA** corretos (o bot preencheu o nome pela sua conta GitHub — confira!)
-- [ ] Li as [regras comuns](docs/REGRAS.md) e sei o que precisa declarar em `FONTES.md`
-- [ ] Sei que a **pasta da prova ainda nao foi publicada** — no dia da prova o bot puxa minha track (`exams/<ano>/<track>/`) e ela **vira meu repositorio** (README, contrato e testes novos); o relogio da janela comeca no commit de aplicacao
-- [ ] Confirmo que vou entregar com commits **dentro da janela** contada a partir desse commit de aplicacao
-
-Ao marcar as caixas (ou comentar aqui), o workflow **Preparar entrega** valida
-e responde nesta mesma issue. Duvidas? Comente aqui.
-"""
-    status, issue = api("POST", "/repos/%s/issues" % REPO_FULL,
-                        {"title": "🎯 Preparar entrega — prova",
-                         "body": corpo, "labels": ["prova"]})
-    if status == 201:
-        api("POST", "/repos/%s/issues/%d/comments" % (REPO_FULL, issue["number"]),
+    # 6) comentario de boas-vindas na issue da prova
+    if numero_issue:
+        api("POST", "/repos/%s/issues/%d/comments" % (REPO_FULL, numero_issue),
             {"body": "⚙️ **Setup automatico concluido.** Repositorio: `%s`\n\n"
-                     "A prova ainda **nao** foi publicada no template. Quando o "
-                     "professor publicar a pasta do ano, o workflow *Aplicar "
-                     "prova* puxa os arquivos para ca sozinho e abre a issue "
-                     "da prova com seus parametros." % REPO})
-        print("Issue #%d criada." % issue["number"])
-    else:
-        print("Falha ao criar issue (status %d)." % status)
+                     "Esta é a **issue unica da sua prova**: preparacao, selecao "
+                     "da track (`/track <nome-da-pasta>`), aplicacao, nota parcial "
+                     "e fechamento acontecem aqui. O relogio da janela comeca no "
+                     "commit de aplicacao. Ao final, **voce fecha esta issue** "
+                     "para encerrar a prova — o sistema gera o `teacher.json` de "
+                     "entrega." % REPO})
+        print("Comentario de boas-vindas postado na issue #%d." % numero_issue)
 
 
 if __name__ == "__main__":

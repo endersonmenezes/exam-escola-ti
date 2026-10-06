@@ -1,8 +1,10 @@
 name: Preparar entrega (issue da prova)
 
-# "Sistema de prova": o aluno marca os checkboxes (ou comenta) na issue
-# "🎯 Preparar entrega" aberta pelo setup; este workflow valida a preparação
-# (ALUNO.md com RA, identidade, variante, FONTES.md) e responde na própria issue.
+# "Sistema de prova": o aluno marca os checkboxes (ou comenta) na issue unica
+# "🎯 Prova" (lock .prova/issue) aberta pelo setup; este workflow valida a
+# preparacao (ALUNO.md com RA, identidade, variante, FONTES.md), mantem o
+# /track e responde na propria issue. O fechamento da issue encerra a prova
+# (fechar-prova.yml) — aqui nao fechamos nada.
 
 on:
   issues:
@@ -26,8 +28,9 @@ env:
 jobs:
   preparar:
     name: Validar preparação e responder na issue
-    # no-op no repositorio-template (issues de discussao do proprio repo)
-    if: github.repository != 'endersonmenezes/exam-escola-ti'
+    # no-op no repositorio-template (issues de discussao do proprio repo) e no
+    # fechamento da issue (quem reage ao close e o fechar-prova.yml)
+    if: github.repository != 'endersonmenezes/exam-escola-ti' && github.event.action != 'closed'
     runs-on: ubuntu-slim
     steps:
       - uses: actions/checkout@v7

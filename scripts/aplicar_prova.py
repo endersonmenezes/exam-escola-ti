@@ -8,14 +8,15 @@ Fluxo:
   1. fetch do remote do template (repo publico — sem PAT);
   2. monta as CANDIDATAS: o dummy permanente (`exams/dummy-exam/`, fora da
      hierarquia de ano) + as tracks do ANO MAIS RECENTE (`exams/<ano>/<track>/`).
-     Selecao pela marcacao `.prova/track` (NOME DA PASTA, ex.:
-     `crud-fullstack`, `dummy-exam`); com exatamente 1 candidata a selecao e
-     implicita; com varias, a aplicacao TRAVA DE PROPOSITO ate o `/track`
-     comentado na issue "Preparar entrega" (o dummy nunca e aplicado por
-     engano ao lado de provas reais);
+     Selecao SEMPRE EXPLICITA pela marcacao `.prova/track` (NOME DA PASTA,
+     ex.: `crud-fullstack`, `dummy-exam`) — sem selecao a aplicacao TRAVA e
+     comenta o lembrete de `/track` NA issue da prova (upsert do comentario
+     `<!-- track-lembrete -->` + sentinela `.prova/track-lembrete`, para nao
+     spammar a cada polling);
   3. se ainda nao aplicada: `git checkout <ref> -- <pasta>`, sentinela,
      commit do bot (esse commit ancora o t0 da janela — T4) e push;
-  4. gera .prova/exam-dir + variante/params.json e abre a issue da prova.
+  4. gera .prova/exam-dir + variante/params.json e COMENTA na issue unica da
+     prova (pasta aplicada, janela, parametros) — nao cria issue nova.
 
 DRY_RUN=1 so descobre a pasta (local ou remoto) sem commitar.
 """
@@ -31,6 +32,7 @@ import urllib.request
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(BASE, "scripts"))
 from variante import slug_do_repo, pasta_do_ano, variante  # noqa: E402
+import prova_issue  # noqa: E402
 
 TOKEN = os.environ.get("GH_TOKEN", "")
 REPO_FULL = os.environ.get("REPO_FULL", "")
@@ -95,8 +97,8 @@ def main():
         return
 
     # 2) candidatas = dummy permanente + tracks do ANO MAIS RECENTE. Selecao
-    #    pela marcacao .prova/track (NOME DA PASTA); candidata unica -> impli-
-    #    cita; varias -> trava de proposito ate o /track na issue.
+    #    SEMPRE explicita pela marcacao .prova/track (NOME DA PASTA); sem
+    #    selecao trava e lembra UMA vez na issue (upsert + sentinela).
     anos = sorted({p.split("/")[1] for p in pastas
                    if re.match(r"exams/\d{4}/", p)})
     ano = anos[-1] if anos else ""
@@ -106,25 +108,37 @@ def main():
     track_path = os.path.join(BASE, ".prova", "track")
     if os.path.exists(track_path):
         track_marcada = open(track_path, encoding="utf-8").read().strip()
-    if track_marcada:
-        escolhidas = [p for p in candidatas
-                      if os.path.basename(p) == track_marcada]
-    elif len(candidatas) == 1:
-        escolhidas = candidatas  # candidata unica: selecao implicita
-    else:
-        escolhidas = []
+    escolhidas = [p for p in candidatas
+                  if track_marcada and os.path.basename(p) == track_marcada]
     if not escolhidas:
         opcoes = [("%s (prova-teste)" % p) if p == DUMMY else p
                   for p in candidatas]
         if track_marcada:
-            print("Track '%s' nao encontrada entre as candidatas: %s — comente "
-                  "`/track <nome>` na issue 'Preparar entrega' (grava "
-                  ".prova/track; use `/track dummy-exam` para a prova-teste)."
+            print("Track '%s' nao encontrada entre as candidatas: %s."
                   % (track_marcada, ", ".join(opcoes)))
         else:
-            print("Track nao selecionada. Candidatas: %s — comente `/track <nome>` "
-                  "na issue 'Preparar entrega' (grava .prova/track; use "
-                  "`/track dummy-exam` para a prova-teste)." % ", ".join(opcoes))
+            print("Track nao selecionada (selecao obrigatoria). Candidatas: %s."
+                  % ", ".join(opcoes))
+        if not DRY_RUN:
+            texto_issue = (
+                "⚠️ **Seleção da track obrigatória.** Candidatas: %s.\n\n"
+                "Comente `/track <nome-da-pasta>` nesta issue para escolher a "
+                "prova (ex.: `/track crud-fullstack`; para a prova-teste, "
+                "`/track dummy-exam`)." % ", ".join(opcoes))
+            prova_issue.atualizar_comentario("track-lembrete", texto_issue)
+            lembrete = os.path.join(BASE, ".prova", "track-lembrete")
+            if not os.path.exists(lembrete):
+                with open(lembrete, "w", encoding="utf-8") as f:
+                    f.write("ok\n")
+                # sentinela precisa ser commitada para sobreviver ao poll
+                git("config", "user.name", "github-actions[bot]")
+                git("config", "user.email",
+                    "41898282+github-actions[bot]@users.noreply.github.com")
+                git("add", ".prova/track-lembrete")
+                if git("commit", "-m",
+                       "chore: lembrete de /track enviado na issue").returncode == 0:
+                    git("pull", "--rebase")
+                    git("push")
         return
     pasta = escolhidas[-1]
     print("Pasta da prova escolhida:", pasta)
@@ -183,6 +197,10 @@ def main():
     os.makedirs(os.path.join(BASE, "variante"), exist_ok=True)
     with open(os.path.join(BASE, "variante", "params.json"), "w", encoding="utf-8") as f:
         json.dump(v, f, ensure_ascii=False, indent=2)
+    # selecao ja aconteceu: o lembrete de /track sai (entra neste commit)
+    lembrete = os.path.join(BASE, ".prova", "track-lembrete")
+    if os.path.exists(lembrete):
+        os.remove(lembrete)
 
     # 6) commit do bot (t0 da janela) + push
     git("config", "user.name", "github-actions[bot]")
@@ -196,27 +214,31 @@ def main():
         print("push falhou:", r.stderr)
         return
 
-    # 7) issue da prova
+    # 7) comentario na issue UNICA da prova (nada de issue nova)
     if TOKEN and REPO_FULL:
-        api("POST", "/repos/%s/labels" % REPO_FULL,
-            {"name": "prova-aplicada", "color": "b60205",
-             "description": "Pasta do ano aplicada neste repo"})
+        n_issue = prova_issue.numero()
         params = "\n".join("- `%s` = %s" % (k, val) for k, val in v.items()
                            if k not in ("slug", "EXAM_DIR"))
-        corpo = ("## A prova foi aplicada neste repositorio\n\n"
+        corpo = ("## ✅ Prova aplicada neste repositorio\n\n"
                  "Pasta: `%s` — a janela da prova é de **%d minutos**, "
                  "contados a partir do commit de aplicacao. O relogio ja esta "
                  "rodando.\n\n"
                  "Sua variante (unica do seu repo):\n\n%s\n\n"
-                 "> [!IMPORTANT]\n> Leia o contrato, desenvolva, preencha "
-                 "`FONTES.md` se consultar algo e de push antes do fim da "
-                 "janela. A nota parcial sai no workflow *Auto-correcao*."
+                 "> Leia o contrato, desenvolva, preencha `FONTES.md` se "
+                 "consultar algo e de push antes do fim da janela. A nota "
+                 "parcial sai no workflow *Auto-correcao* (Summary + "
+                 "comentario nesta issue).\n\n"
+                 "**Ao final, voce fecha esta issue para encerrar a prova** — "
+                 "o sistema gera o `teacher.json` de entrega."
                  % (pasta, janela, params))
-        status, issue = api("POST", "/repos/%s/issues" % REPO_FULL,
-                            {"title": "📝 Prova aplicada: %s" % pasta,
-                             "body": corpo, "labels": ["prova-aplicada"]})
-        print("Issue criada: #%d" % issue.get("number", -1) if status == 201
-              else "Falha ao criar issue (%d)" % status)
+        if n_issue:
+            api("POST", "/repos/%s/issues/%s/labels" % (REPO_FULL, n_issue),
+                ["prova-aplicada"])
+            api("POST", "/repos/%s/issues/%s/comments" % (REPO_FULL, n_issue),
+                {"body": corpo})
+            print("Comentario de aplicacao postado na issue #%s." % n_issue)
+        else:
+            print("Lock .prova/issue ausente — comentario de aplicacao nao postado.")
     print("Prova %s aplicada com sucesso." % pasta)
 
 

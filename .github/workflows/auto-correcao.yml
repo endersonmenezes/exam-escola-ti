@@ -17,6 +17,7 @@ on:
 
 permissions:
   contents: read
+  issues: write   # job de nota replica a nota parcial na issue unica da prova
 
 env:
   REPO_SLUG: ${{ github.event.repository.name }}
@@ -158,6 +159,9 @@ jobs:
           pattern: result-*
           merge-multiple: true
       - run: python scripts/nota.py resultados
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO_FULL: ${{ github.repository }}
       - uses: actions/upload-artifact@v7
         with:
           name: nota

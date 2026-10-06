@@ -3,22 +3,20 @@
 > [!NOTE]
 > `exams/dummy-exam/` **não é uma prova real** — é a **prova-teste permanente
 > do sistema**: um hello world em Python para validar o sistema e treinar o
-> ciclo de entrega (fetch do template → overlay na raiz → commit do bot →
-> issue da prova → auto-correção com janela ancorada → nota no Summary).
+> ciclo de entrega (fetch do template → `/track` na issue única → overlay na
+> raiz → commit do bot → auto-correção → nota no Summary e na issue → aluno
+> fecha a issue → `teacher.json`).
 >
 > **Ela fica publicada na `main` para sempre**, de propósito:
 >
 > 1. **Mora fora da hierarquia de ano** — não é `exams/<ano>/<track>/`, então
 >    o ano mais recente nunca a "engole"; ela é candidata de seleção em
 >    qualquer ano.
-> 2. **Seleção implícita quando é a única candidata** — sem provas reais
->    publicadas, quem gerar o repo e pedir "aplicar" recebe o dummy (cenário
->    de treino/teste).
-> 3. **Nunca aplicada por engano ao lado de provas reais** — quando coexistem
->    com as tracks do ano vigente, há mais de uma candidata e a aplicação
->    **trava de propósito** até o aluno (ou professor) comentar
->    `/track <nome>` na issue "🎯 Preparar entrega" — `/track dummy-exam`
->    escolhe a prova-teste; o nome da pasta real escolhe a prova real.
+> 2. **Nunca aplicada sozinha** — a seleção é **sempre explícita**:
+>    `/track dummy-exam` na issue única "🎯 Prova" é a escolha de teste do
+>    aluno/professor. Sem seleção a aplicação trava com um lembrete na issue
+>    (uma única vez), então o dummy não pode ser aplicado por engano no dia
+>    de uma prova real.
 > 4. **Anos antigos acumulam no histórico** — pastas `exams/<ano>/` de anos
 >    anteriores ficam no histórico do repo para consulta; fora da `main`, não
 >    entram na seleção (só o ano mais recente + o dummy são candidatos).

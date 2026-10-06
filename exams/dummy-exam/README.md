@@ -31,7 +31,8 @@ repositório, então copiar de colega não funciona.
 - **Contrato**: `contrato.json` (endpoints, regras da saudação, variante)
 - **Sua variante**: `variante/params.json` (gerada na aplicação; única do seu repo)
 - **Testes públicos**: `bash scripts/rodar_testes.sh` (requer Docker)
-- **Nota**: a cada push, no Summary do workflow *Auto-correção*
+- **Nota**: a cada push, no Summary do workflow *Auto-correção* **e em
+  comentário na issue "🎯 Prova"** (a nota é atualizada no mesmo comentário)
 - **Regras e rastreabilidade**: `docs/REGRAS.md` e `FONTES.md`
 
 ## Regras da prova-teste
@@ -49,10 +50,20 @@ repositório, então copiar de colega não funciona.
   template) nem `track.json`/`contrato.json`/`rubrica.json` depois da
   aplicação (conferido contra o commit de aplicação) — prova zerada.
 
+## Como esta prova-teste chegou aqui
+
+Esta pasta foi aplicada por overlay depois que **você selecionou a track**:
+na issue única "🎯 Prova" o comentário foi `/track dummy-exam` e, em seguida,
+"aplicar" — o sistema puxou esta pasta do template e ela virou a raiz do seu
+repo. Nas provas reais o passo é o mesmo: `/track <nome-da-pasta>` na issue
+(a seleção é **sempre obrigatória** — nada de aplicação automática).
+
 ## Agora
 
 1. Leia `contrato.json` **inteiro** antes de codar (são dois endpoints).
 2. Implemente em `src/app.py` (apague o `TODO`) + confira o `Dockerfile`.
 3. Rode `bash scripts/rodar_testes.sh` localmente (requer Docker) e veja os
    5 testes passarem.
-4. Commits pequenos, push antes do fim da janela. Boa prova! 🚀
+4. Commits pequenos, push antes do fim da janela.
+5. **Ao final, feche a issue "🎯 Prova"** — isso encerra a prova e gera o
+   `teacher.json` de entrega. Boa prova! 🚀

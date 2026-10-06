@@ -87,3 +87,10 @@ with open(os.path.join(os.getcwd(), "nota.json"), "w", encoding="utf-8") as f:
     json.dump({"nota": nota, "teto": teto, "criterios": criterios,
                "fatal": fatal_geral, "observacoes": observacoes},
               f, ensure_ascii=False, indent=2)
+
+# replica a nota na issue unica da prova (upsert por marcador — nao spamma)
+try:
+    import prova_issue  # noqa: E402
+    prova_issue.atualizar_comentario("nota-parcial", "\n".join(linhas))
+except Exception as e:
+    print("comentario de nota na issue falhou (%s) — seguindo." % e)
