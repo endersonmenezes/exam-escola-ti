@@ -162,12 +162,15 @@ if pasta:
     # ---- Procedencia: arquivos da prova nao podem mudar apos a aplicacao ----
     t0_hash = sh("git", "log", "--format=%H", "--grep=aplicar prova", "-1").strip()
     if t0_hash:
-        r = subprocess.run(["git", "diff", "--quiet", t0_hash, "--",
-                            "track.json", "contrato.json", "rubrica.json"],
+        protegidos = ["track.json", "contrato.json", "rubrica.json"]
+        # tracks de especificacao trazem ENUNCIADO.md — tambem intocavel
+        if os.path.exists(os.path.join(BASE, "ENUNCIADO.md")):
+            protegidos.append("ENUNCIADO.md")
+        r = subprocess.run(["git", "diff", "--quiet", t0_hash, "--"] + protegidos,
                            cwd=BASE)
         if r.returncode != 0:
-            fatal.append("Arquivo da prova (track.json/contrato.json/rubrica.json) "
-                         "alterado apos o commit de aplicacao — prova zerada.")
+            fatal.append("Arquivo da prova (%s) alterado apos o commit de "
+                         "aplicacao — prova zerada." % "/".join(protegidos))
 else:
     alerts.append("Prova ainda nao aplicada (sem pasta do ano) — janela T4 nao avaliada.")
 

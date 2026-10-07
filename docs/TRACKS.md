@@ -37,7 +37,7 @@ estilos de prova) sem disparar o que não serve para a track atual.
   "lockfile_version": 1,             // obrigatório, int — versão do schema
   "workflows": {                     // obrigatório, dict[str, bool]
     "auto-correcao.trampas": true,           // identidade, autoria, janela, integridade
-    "auto-correcao.estrutura": true,         // entrega mínima (Dockerfile, README)
+    "auto-correcao.estrutura": true,         // entrega mínima (Containerfile, README)
     "auto-correcao.testes-publicos": true,   // suíte pública da track
     "auto-correcao.testes-escondidos": true, // suíte do repo de correção
     "auto-correcao.nota": true               // agregação da nota (base + extras)
@@ -59,15 +59,29 @@ estilos de prova) sem disparar o que não serve para a track atual.
 | Chave | Job | Desliga quando a track… |
 | --- | --- | --- |
 | `auto-correcao.trampas` | `trampas` | — (mantenha `true`; é o anti-cola e o gate da janela) |
-| `auto-correcao.estrutura` | `estrutura` | não tiver Dockerfile/README como entrega |
+| `auto-correcao.estrutura` | `estrutura` | não tiver Containerfile/README como entrega |
 | `auto-correcao.testes-publicos` | `testes-publicos` | não tiver suíte pública (ex.: prova de debugging) |
 | `auto-correcao.testes-escondidos` | `testes-escondidos` | não tiver suíte escondida |
+| `auto-correcao.md` | `md` | não for de especificação (entregável em `.md`, critério E mecânico via `scripts/check_md.py`) |
+| `auto-correcao.compila` | `compila` | não tiver camada de compilação (debugging; `scripts/check_build.py`, config `suites.compila`: `cmd`/`dir`/`pontos` — job inclui Java 17 + Maven) |
+| `auto-correcao.sobe` | `sobe` | não tiver ambiente containerizado para subir (debugging; `scripts/check_sobe.py`, config `suites.sobe`: `compose_file`/`servicos_esperados`/`espera_s`/`pontos`) |
+| `auto-correcao.smoke` | `smoke` | não tiver smoke de ponta a ponta (debugging; `scripts/smoke.py` cuida do ciclo compose, a track entrega as checagens em `smoke_track.py` na raiz — mesmo padrão do `tests_publicos.py`) |
+| `auto-correcao.metodo` | `metodo` | não avaliar método de debug (commits hipótese→correção; `scripts/check_metodo.py`, config `suites.metodo`: `pontos`/`relatorio`) |
 | `auto-correcao.nota` | `nota` | — (mantenha `true`; sem nota não há feedback) |
 
-> Uma track de **debugging** (app quebrada em container, ciclo
-> build→logs→corrigir) desligaria
-> `testes-publicos`/`testes-escondidos` e no futuro ganharia jobs próprios
-> (`compose-up`, `smoke`) ativados por novas chaves — ver "Estender o sistema".
+> Uma track de **especificação** (o aluno entrega só `.md`, sem app nem
+> Containerfile) liga `md` e desliga `estrutura`/`testes-publicos`; o job `md`
+> roda `scripts/check_md.py` com a config de `suites.md` do lockfile:
+> `{"pontos": 15, "pts_por_arquivo": 3, "max_linhas_bloco": 20}` (bloco de
+> código maior que o limite = fatal, nota 0 via job de nota).
+
+> Uma track de **debugging** (app quebrada em containers, ciclo
+> build→logs→corrigir) desliga `estrutura`/`testes-publicos`/`md` e liga os
+> jobs próprios `compila`/`sobe`/`smoke`/`metodo` (tabela acima). O ambiente
+> sobe com a variante injetada como variáveis de ambiente (`check_sobe.py` e
+> `smoke.py` exportam todos os escalares de `variante/params.json` antes do
+> `compose up`). A proporção fina por erro corrigido (dentro de cada camada)
+> é refinada na correção docente — no CI cada camada é binária.
 
 ## CLI — `scripts/track_lock.py`
 
@@ -114,7 +128,7 @@ preencher seus `outputs`; os demais jobs consomem via
 
 1. **Crie a pasta** `exams/<ano>/<sua-track>/` espelhando a raiz do repo do
    aluno: `README.md` (visão da prova), `contrato.json`, `rubrica.json`,
-   `tests_publicos.py` (se houver), stubs de entrega (`Dockerfile`, `src/`…).
+   `tests_publicos.py` (se houver), stubs de entrega (`Containerfile`, `src/`…).
    O único arquivo que NÃO vai para o aluno é `AVISO-*.md` (o overlay pula).
 2. **Escreva o `track.json`** obrigatório: `track`, `lockfile_version: 1`,
    `workflows` (ligue só o que a track usa), `recursos`. Valide com
@@ -123,6 +137,12 @@ preencher seus `outputs`; os demais jobs consomem via
 3. **Contrato**: siga o schema de `contrato.json` (seção `variante` com as
    tabelas de parâmetros — a variante do aluno deriva do nome do repo;
    `endpoints` detalhados; bloco `frontend` se `recursos.frontend`).
+   Tabelas de variante: as chaves núcleo (`PREFIXOS`, `RAZOES`, `PORTA_BASE`,
+   `FAIXA`) cobrem tracks estilo API/juiz; tracks com outros parâmetros usam
+   `variante.extras` — cada entrada é `{"opcoes": [...]}` (escolha por módulo)
+   ou `{"base": N, "passo": M, "faixa": F}` (`base + (h % faixa) * passo`).
+   Com `extras` presente, as chaves núcleo são opcionais; sem `extras`, elas
+   são obrigatórias (validado pelo `validar_exams.py`).
 4. **Rubrica**: `nota_max`, `extras_max` (0 se não houver extras),
    `janela_minutos` (enforcement e divulgação — `aplicar_prova.py` divulga o
    valor real na issue da prova), pesos dos critérios.

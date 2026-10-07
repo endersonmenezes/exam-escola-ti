@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Critérios de entrega: Dockerfile (15) e README com instruções (5).
+"""Critérios de entrega: Containerfile/Dockerfile (15) e README com instruções (5).
 
 O 'Dockerfile funcional' completo (suíte sobe sem ajustes) é confirmado pelos
 jobs de teste; aqui se verifica a presença e o formato mínimo.
@@ -24,21 +24,24 @@ def peso(nome, default):
                 pass
     return default
 
-dockerfile = os.path.join(BASE, "Dockerfile")
+dockerfile = os.path.join(BASE, "Containerfile")
+if not os.path.exists(dockerfile):
+    dockerfile = os.path.join(BASE, "Dockerfile")
 if not os.path.exists(dockerfile):
     criterios.append({"criterio": "Dockerfile", "pontos": 0, "max": peso("dockerfile", 15)})
-    obs.append("Dockerfile AUSENTE — sem ele os testes não sobem e valem 0.")
+    obs.append("Containerfile/Dockerfile AUSENTE — sem ele os testes não sobem e valem 0.")
 else:
     texto = open(dockerfile, encoding="utf-8", errors="replace").read()
+    nome = os.path.basename(dockerfile)
     if texto.strip() == "FROM scratch":
         criterios.append({"criterio": "Dockerfile", "pontos": 0, "max": peso("dockerfile", 15)})
-        obs.append("Dockerfile ainda é o stub (FROM scratch).")
+        obs.append("%s ainda é o stub (FROM scratch)." % nome)
     elif re.search(r"EXPOSE\s+8080", texto) and ("CMD" in texto.upper() or "ENTRYPOINT" in texto.upper()):
         criterios.append({"criterio": "Dockerfile", "pontos": peso("dockerfile", 15), "max": peso("dockerfile", 15)})
-        obs.append("Dockerfile presente com EXPOSE 8080 e comando de execução.")
+        obs.append("%s presente com EXPOSE 8080 e comando de execução." % nome)
     else:
         criterios.append({"criterio": "Dockerfile", "pontos": 7, "max": peso("dockerfile", 15)})
-        obs.append("Dockerfile presente, mas sem EXPOSE 8080 ou sem CMD/ENTRYPOINT.")
+        obs.append("%s presente, mas sem EXPOSE 8080 ou sem CMD/ENTRYPOINT." % nome)
 
 readme = os.path.join(BASE, "README.md")
 texto = open(readme, encoding="utf-8", errors="replace").read() if os.path.exists(readme) else ""

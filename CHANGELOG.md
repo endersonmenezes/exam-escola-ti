@@ -8,6 +8,43 @@ Todas as mudanças notáveis do sistema de provas da Escola de TI
 > em prova real. As turmas que exercitaram o sistema até aqui usaram-no como
 > aula teste (prova dummy "Hello World").
 
+## [1.1.0] — 2026-10-07
+
+Infraestrutura para as provas reais de 2026: o esqueleto passa a suportar os
+três estilos de track (API/juiz, especificação SDD, debugging fullstack).
+As tracks em si (`exams/2026/…`) **não fazem parte desta release** — são
+publicadas só no dia da aplicação.
+
+### Alterado
+
+- **Nomes agnósticos de runtime**: `Containerfile` (em vez de `Dockerfile`) em
+  todas as tracks e stubs, e `compose.yaml` (já era o nome canônico na track de
+  debugging). `rodar_testes.sh` detecta `Containerfile`/`Dockerfile`
+  (`-f` explícito) e `check_entrega.py` aceita ambos — docker e podman
+  funcionam igualmente.
+
+### Adicionado
+
+- **`variante.extras` no `contrato.json`**: tabelas de variante genéricas
+  (`{"opcoes": [...]}` ou `{"base": N, "passo": M, "faixa": F}`) para tracks
+  com parâmetros além do núcleo (`PREFIXO`/`RAZAO_PREFERENCIAL`/`PORTA_API`),
+  que passa a ser opcional quando `extras` existe (`scripts/variante.py` +
+  validação em `scripts/validar_exams.py`).
+- **Novo job `md` na auto-correção** (chave `auto-correcao.md` no lockfile):
+  critério E mecânico dos `.md` para tracks de especificação, via novo script
+  do esqueleto `scripts/check_md.py` (config em `suites.md` do `track.json`;
+  bloco de código acima do limite = fatal, zero via job de nota).
+- **`check_trampas.py`**: `ENUNCIADO.md` (quando presente) passa a ser
+  protegido contra alteração após o commit de aplicação.
+- **Extras com `formato`**: entradas de `variante.extras` aceitam `formato`
+  (ex.: `"prova_%02d"`) para parâmetros string derivados de número.
+- **Novos jobs de debugging na auto-correção** (chaves `auto-correcao.compila`,
+  `.sobe`, `.smoke`, `.metodo`): camadas de compilação (`check_build.py`),
+  subida do ambiente compose com variante injetada (`check_sobe.py`), smoke de
+  ponta a ponta com ciclo de vida no esqueleto e checagens entregues pela
+  track em `smoke_track.py` (`smoke.py`), e método sistemático
+  (`check_metodo.py`).
+
 ## [1.0.0] — 2026-10-06
 
 Primeira versão oficial do sistema de provas.
@@ -80,4 +117,5 @@ Primeira versão oficial do sistema de provas.
 - Respostas do preparar fora de contexto (roteamento) e comentários duplicados
   (upsert).
 
+[1.1.0]: https://github.com/endersonmenezes/exam-escola-ti/releases/tag/v1.1.0
 [1.0.0]: https://github.com/endersonmenezes/exam-escola-ti/releases/tag/v1.0.0

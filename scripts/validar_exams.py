@@ -17,6 +17,27 @@ BLOQUEADOS = {"scripts", ".github", "docs", ".gitignore", ".prova", "tests"}
 VARIANTE_OBRIGATORIAS = {"PREFIXOS": list, "RAZOES": list,
                          "PORTA_BASE": int, "FAIXA": int}
 
+
+def validar_extras(extras, prefixo):
+    """Cada entrada: {"opcoes": list} OU {"base": int, "faixa": int[, "passo": int]}."""
+    falhas = []
+    if not isinstance(extras, dict):
+        return ["%s: contrato.json variante.extras deve ser objeto" % prefixo]
+    for nome, cfg in extras.items():
+        if not isinstance(cfg, dict):
+            falhas.append("%s: variante.extras.%s deve ser objeto" % (prefixo, nome))
+        elif "opcoes" in cfg:
+            if not isinstance(cfg["opcoes"], list) or not cfg["opcoes"]:
+                falhas.append("%s: variante.extras.%s.opcoes deve ser lista nao-vazia"
+                              % (prefixo, nome))
+        elif not (isinstance(cfg.get("base"), int) and isinstance(cfg.get("faixa"), int)):
+            falhas.append("%s: variante.extras.%s precisa de opcoes(list) ou "
+                          "base(int)+faixa(int)" % (prefixo, nome))
+        elif "formato" in cfg and not isinstance(cfg["formato"], str):
+            falhas.append("%s: variante.extras.%s.formato deve ser string"
+                          % (prefixo, nome))
+    return falhas
+
 erros, avisos = [], []
 
 if not os.path.isdir(EXAMS):
@@ -78,10 +99,14 @@ for prefixo, pasta in pastas:
         try:
             contrato = json.load(open(cj, encoding="utf-8"))
             variante = contrato["variante"]
-            for chave, tipo in VARIANTE_OBRIGATORIAS.items():
-                if not isinstance(variante.get(chave), tipo):
-                    erros.append("%s: contrato.json variante.%s deve ser %s"
-                                 % (prefixo, chave, tipo.__name__))
+            if "extras" in variante:
+                erros.extend(validar_extras(variante["extras"], prefixo))
+            else:
+                # sem extras, as tabelas nucleo sao obrigatorias
+                for chave, tipo in VARIANTE_OBRIGATORIAS.items():
+                    if not isinstance(variante.get(chave), tipo):
+                        erros.append("%s: contrato.json variante.%s deve ser %s"
+                                     % (prefixo, chave, tipo.__name__))
         except KeyError as e:
             erros.append("%s: contrato.json sem secao %s" % (prefixo, e))
         except ValueError:

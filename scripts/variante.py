@@ -65,13 +65,25 @@ def variante(slug: str, base: str = BASE) -> dict:
                          "scripts/aplicar_prova.py.")
     p = parametros_ano(pasta, base)
     h = int(hashlib.sha256(slug.encode("utf-8")).hexdigest(), 16)
-    return {
-        "slug": slug,
-        "EXAM_DIR": pasta,
-        "PREFIXO": p["PREFIXOS"][h % len(p["PREFIXOS"])],
-        "RAZAO_PREFERENCIAL": p["RAZOES"][h % len(p["RAZOES"])],
-        "PORTA_API": p["PORTA_BASE"] + (h % p["FAIXA"]),
-    }
+    v = {"slug": slug, "EXAM_DIR": pasta}
+    # chaves nucleo (tracks estilo API/juiz) — computadas so se a tabela existir
+    if "PREFIXOS" in p:
+        v["PREFIXO"] = p["PREFIXOS"][h % len(p["PREFIXOS"])]
+    if "RAZOES" in p:
+        v["RAZAO_PREFERENCIAL"] = p["RAZOES"][h % len(p["RAZOES"])]
+    if "PORTA_BASE" in p and "FAIXA" in p:
+        v["PORTA_API"] = p["PORTA_BASE"] + (h % p["FAIXA"])
+    # tabelas genericas da track (ex.: tarifa, teto, fracao): cada entrada e
+    # {"opcoes": [...]} (escolha por modulo) ou {"base": N, "passo": M,
+    # "faixa": F} (base + (h % faixa) * passo); "formato" opcional formata o
+    # numero (ex.: "prova_%02d"). Deterministico como o nucleo.
+    for nome, cfg in p.get("extras", {}).items():
+        if "opcoes" in cfg:
+            v[nome] = cfg["opcoes"][h % len(cfg["opcoes"])]
+        else:
+            numero = cfg["base"] + (h % cfg["faixa"]) * cfg.get("passo", 1)
+            v[nome] = cfg["formato"] % numero if "formato" in cfg else numero
+    return v
 
 
 def main() -> None:

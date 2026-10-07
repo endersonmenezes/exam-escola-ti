@@ -31,6 +31,11 @@ KNOWN_WORKFLOW_KEYS = {
     "workflows.auto-correcao.estrutura",
     "workflows.auto-correcao.testes-publicos",
     "workflows.auto-correcao.testes-escondidos",
+    "workflows.auto-correcao.md",
+    "workflows.auto-correcao.compila",
+    "workflows.auto-correcao.sobe",
+    "workflows.auto-correcao.smoke",
+    "workflows.auto-correcao.metodo",
     "workflows.auto-correcao.nota",
 }
 

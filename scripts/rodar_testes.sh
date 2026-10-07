@@ -10,6 +10,10 @@ if ! command -v docker >/dev/null 2>&1; then
   exit 2
 fi
 
+# Containerfile (nome agnostico, podman-style) ou Dockerfile — o que existir
+CONTAINERFILE="Dockerfile"
+[ -f Containerfile ] && CONTAINERFILE="Containerfile"
+
 python3 scripts/variante.py >/dev/null
 # PORTA_API vem da variante do repo (fallback 9201 — mesmo default do sistema)
 PORTA=$(python3 -c "import json,os;p='variante/params.json';print(json.load(open(p)).get('PORTA_API',9201) if os.path.exists(p) else 9201)")
@@ -18,8 +22,8 @@ SLUG=$(python3 -c "import json;print(json.load(open('variante/params.json'))['sl
 SUF=$(printf '%s' "$SLUG" | tr '[:upper:]' '[:lower:]' | tr -c 'a-z0-9' '-' | sed 's/-*$//')
 IMAGEM="prova-$SUF"
 
-echo "==> build $IMAGEM"
-docker build -q -t "$IMAGEM" .
+echo "==> build $IMAGEM (de $CONTAINERFILE)"
+docker build -q -t "$IMAGEM" -f "$CONTAINERFILE" .
 
 echo "==> subindo em localhost:$PORTA"
 docker rm -f "prova-teste-$SUF" >/dev/null 2>&1 || true

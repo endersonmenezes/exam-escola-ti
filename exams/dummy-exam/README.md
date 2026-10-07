@@ -16,7 +16,7 @@ repositório, então copiar de colega não funciona.
 | Critério | Pontos |
 | --- | --- |
 | Testes públicos (5, em `tests/public/` — saudação da variante, defaults, validação, `src/`, `FONTES.md`) | 70 |
-| Dockerfile funcional (suíte sobe sem ajustes — `EXPOSE 8080` + comando de execução) | 20 |
+| Containerfile funcional (suíte sobe sem ajustes — `EXPOSE 8080` + comando de execução) | 20 |
 | README com instruções de subida (local e container) | 10 |
 | **Total** | **100** |
 
@@ -54,7 +54,7 @@ seus valores; no `variante/params.json` eles aparecem assim:
 | Caminho | Papel |
 | --- | --- |
 | `src/` | **Sua solução** — é aqui que você implementa |
-| `Dockerfile` | Como a suíte sobe o seu código em container |
+| `Containerfile` | Como a suíte sobe o seu código em container |
 | `tests/public/` | O que o CI roda a cada push (veio da pasta da prova) |
 | `contrato.json` / `rubrica.json` | O contrato da prova e como ela vale |
 | `variante/` | Os seus parâmetros |
@@ -93,7 +93,7 @@ seleção é **sempre obrigatória** — nada de aplicação automática sem esc
 ## Agora
 
 1. Leia `contrato.json` **inteiro** antes de codar (são dois endpoints).
-2. Implemente em `src/app.py` (apague o `TODO`) + confira o `Dockerfile`.
+2. Implemente em `src/app.py` (apague o `TODO`) + confira o `Containerfile`.
 3. Rode `bash scripts/rodar_testes.sh` localmente (requer Docker) e veja os
    5 testes passarem.
 4. Commits pequenos, push antes do fim da janela — pushes **não** disparam

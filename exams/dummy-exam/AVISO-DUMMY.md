@@ -38,7 +38,7 @@ mesmo layout):
 | `rubrica.json` | rubrica raiz (pesos, extras, janela) |
 | `track.json` | **lockfile raiz** — liga/desliga os workflows (ver `docs/TRACKS.md`; `recursos` é obrigatório) |
 | `tests_publicos.py` | `tests/public/test_publicos.py` |
-| `Dockerfile`, `src/` | stubs de entrega na raiz |
+| `Containerfile`, `src/` | stubs de entrega na raiz |
 
 O que **não** está na pasta (workflows, scripts base, trampas, nota) é o
 esqueleto ano-agnóstico — protegido pelo tamper-check e mantido no template.

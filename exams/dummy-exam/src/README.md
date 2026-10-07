@@ -4,5 +4,5 @@
 - `GET /healthz` → 200 `{"status": "ok"}` — a suíte espera por ele para começar;
 - `GET /saudar` → saudação em texto puro, com os defaults e validações do contrato;
 - **só stdlib** (`http.server`) já basta — esta prova-teste não precisa de pip;
-- `python3 src/app.py` sobe o servidor localmente; o `Dockerfile` da raiz já
+- `python3 src/app.py` sobe o servidor localmente; o `Containerfile` da raiz já
   sabe rodá-lo no container.

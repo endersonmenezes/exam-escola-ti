@@ -159,7 +159,7 @@ nunca é aplicado por engano no dia de uma prova real.
 1. Crie um repo de teste: `gh repo create prova-teste-meu-login --template endersonmenezes/exam-escola-ti --private` (ou o botão "Use this template"). O setup roda sozinho no push de criação: identidade, `ALUNO.md` e `README.md` com o botão "🎯 Iniciar a prova", e a **issue única "🎯 Prova"** (lock `.prova/issue`).
 2. Complete o RA em `ALUNO.md` e marque os checkboxes na issue — *Preparar entrega* valida e responde na issue.
 3. Comente `/track dummy-exam` na issue: o sistema valida, responde na hora e **aplica a prova-teste automaticamente** (overlay — `contrato.json` na raiz, README novo, `tests/public/` —, commit do bot = t0 da janela, comentário com a sua variante). Comentar "aplicar" na issue também força, se quiser antecipar.
-4. Implemente algo em `src/` + `Dockerfile` e dê push — **pushes não disparam
+4. Implemente algo em `src/` + `Containerfile` e dê push — **pushes não disparam
    correção**; quando quiser feedback, comente `/auto-correcao` na issue: a
    *Auto-correção* roda na hora (trampas + testes públicos) e a nota sai no
    Summary **e em comentário na issue**. Rode ao menos 1x — é requisito para
@@ -201,7 +201,7 @@ nunca é aplicado por engano no dia de uma prova real.
 │   ├── fechar_prova.py   fecha a prova: gera teacher.json (schema 1) na raiz
 │   ├── track_lock.py     lockfile track.json (liga/desliga jobs, CLI get/show/check)
 │   ├── check_trampas.py  T2/T3/T4/T5 — identidade, autoria, janela, integridade
-│   ├── check_entrega.py  critérios de entrega (Dockerfile, README)
+│   ├── check_entrega.py  critérios de entrega (Containerfile, README)
 │   ├── rodar_testes.sh   build + sobe o container + pytest (testes públicos)
 │   ├── score_publicos.py pontua o pytest a partir do log (peso da rubrica)
 │   ├── nota.py           agrega result-*.json + Summary + comentário de nota
@@ -215,7 +215,7 @@ nunca é aplicado por engano no dia de uma prova real.
 │   ├── rubrica.json      vira rubrica raiz (pesos, extras, janela)
 │   ├── track.json        vira lockfile raiz (liga workflows — docs/TRACKS.md)
 │   ├── tests_publicos.py vira tests/public/test_publicos.py
-│   ├── Dockerfile, src/  stubs de entrega na raiz
+│   ├── Containerfile, src/  stubs de entrega na raiz
 │   └── AVISO-DUMMY.md    aviso interno (não vai para o repo do aluno)
 ├── exams/<ano>/<track>/  prova de um ano (só na main durante a aplicação)
 ├── tests/public/         placeholder — os testes chegam com a aplicação
