@@ -148,24 +148,39 @@ if pasta:
             except Exception:
                 pass
             break
-    t0_linha = sh("git", "log", "--format=%ad|%s",
+    t0_linha = sh("git", "log", "--format=%ad|%s|%an",
                   "--date=format:%Y-%m-%dT%H:%M:%S",
                   "--grep=aplicar prova", "-1").strip()
+    # so o commit do BOT ancora a janela — um commit do aluno com a mesma
+    # mensagem NAO pode re-ancorar (fraude de janela/procedencia)
+    fraude_ancora = False
+    if t0_linha and "github-actions" not in t0_linha.split("|")[-1].lower():
+        fatal.append("Commit 'aplicar prova' mais recente NAO e do bot "
+                     "(autor: %s) — possivel tentativa de re-ancorar a janela. "
+                     "Prova zerada, revisao manual."
+                     % t0_linha.split("|")[-1])
+        t0_linha = ""
+        fraude_ancora = True
     if t0_linha:
         ini = t0_linha.split("|")[0].strip()
         t0 = datetime.strptime(ini, "%Y-%m-%dT%H:%M:%S")
         fim = (t0 + timedelta(minutes=minutos)).strftime("%Y-%m-%dT%H:%M:%S")
-    else:
+    elif not fraude_ancora:
         fatal.append("Pasta da prova presente mas commit 'aplicar prova' ausente "
                      "no historico (force-push?) — prova zerada, revisao manual.")
 
     # ---- Procedencia: arquivos da prova nao podem mudar apos a aplicacao ----
-    t0_hash = sh("git", "log", "--format=%H", "--grep=aplicar prova", "-1").strip()
+    t0_hash = sh("git", "log", "--format=%H", "--author=github-actions",
+                 "--grep=aplicar prova", "-1").strip()
     if t0_hash:
         protegidos = ["track.json", "contrato.json", "rubrica.json"]
         # tracks de especificacao trazem ENUNCIADO.md — tambem intocavel
         if os.path.exists(os.path.join(BASE, "ENUNCIADO.md")):
             protegidos.append("ENUNCIADO.md")
+        # testes publicos chegam via overlay no commit de aplicacao — o aluno
+        # nao pode edita-los/apaga-los (editar = zerar)
+        if os.path.isdir(os.path.join(BASE, "tests", "public")):
+            protegidos.append("tests/public")
         r = subprocess.run(["git", "diff", "--quiet", t0_hash, "--"] + protegidos,
                            cwd=BASE)
         if r.returncode != 0:
@@ -205,8 +220,17 @@ tpl = os.environ.get("TEMPLATE_REPO", "")
 if token and tpl:
     tmp = tempfile.mkdtemp(prefix="tpl_")
     url = "https://x-access-token:%s@github.com/%s.git" % (token, tpl)
-    r = subprocess.run(["git", "clone", "--depth", "1", url, tmp],
+    r = subprocess.run(["git", "clone", url, tmp],
                        capture_output=True, text=True)
+    # T3 compara contra o SHA do template DA APLICACAO (gravado pelo bot em
+    # .prova/template-ref) — um push de fix no template DURANTE a prova nao
+    # pode gerar falso tamper nos alunos
+    ref_path = os.path.join(BASE, ".prova", "template-ref")
+    if r.returncode == 0 and os.path.exists(ref_path):
+        ref = open(ref_path, encoding="utf-8").read().strip()
+        if ref:
+            subprocess.run(["git", "checkout", "--quiet", ref], cwd=tmp,
+                           capture_output=True, text=True)
     if r.returncode != 0:
         alerts.append("Falha ao clonar template '%s' para tamper-check — T3 nao executado." % tpl)
     else:

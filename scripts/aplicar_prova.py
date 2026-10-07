@@ -159,6 +159,13 @@ def main():
 
     # 4) checkout da pasta e OVERLAY: a track VIRA o repositorio do aluno
     git("checkout", "FETCH_HEAD", "--", pasta)
+    # grava o SHA do template usado — o tamper-check (T3) compara contra ELE,
+    # nao contra o HEAD futuro do template
+    fetch_head = git("rev-parse", "FETCH_HEAD").stdout.strip()
+    if fetch_head:
+        with open(os.path.join(BASE, ".prova", "template-ref"), "w",
+                  encoding="utf-8") as f:
+            f.write(fetch_head + "\n")
     origem = os.path.join(BASE, pasta)
     BLOQUEADOS = {"scripts", ".github", "docs", ".gitignore", ".prova", "tests"}
     colisoes = sorted(set(os.listdir(origem)) & BLOQUEADOS)

@@ -37,6 +37,12 @@
   link a qualquer momento; você deve saber explicar qualquer trecho.
 - **IA como agente** (edita arquivos, executa comandos no seu lugar) ou
   conteúdo sem declaração → **nota 0** (plágio).
+- **Aviso de dissuasão**: o material da prova pode conter **canários para
+  agentes de IA** (instruções ocultas em comentários, invisíveis para quem lê
+  normalmente). Um artefato que contém a marca do canário evidencia que um
+  agente escreveu no seu lugar **e** que você não revisou — vai para revisão
+  manual. Quem resolve de verdade (lendo o contrato, não os comentários) não
+  tem com o que se preocupar.
 
 ## Zeramento automático (o CI falha com "prova zerada")
 

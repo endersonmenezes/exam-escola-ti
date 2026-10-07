@@ -8,6 +8,65 @@ Todas as mudanças notáveis do sistema de provas da Escola de TI
 > em prova real. As turmas que exercitaram o sistema até aqui usaram-no como
 > aula teste (prova dummy "Hello World").
 
+## [1.2.0] — 2026-10-07
+
+Prova 01 de 2026: as três tracks reais entram no repositório
+(`exams/2026/track-01-especificacao-sdd/`, `track-02-debugging/`,
+`track-03-crud/`), convertidas do material de origem para o formato de overlay
+do esqueleto v1.1.0. Publicação efetiva (push/release) só no dia da aplicação.
+
+### Corrigido (auditoria pré-prova por 3 agentes)
+
+- **Âncora da janela anti-fraude**: `check_trampas.py` e `fechar_prova.py`
+  só aceitam o commit de aplicação **do bot** (`--author=github-actions`) —
+  um commit do aluno com a mesma mensagem não re-ancora mais a janela nem
+  neutraliza o diff de procedência;
+- **Procedência ampliada**: `tests/public/` (chega via overlay) e
+  `ENUNCIADO.md` não podem mudar após a aplicação;
+- **T3 pinado**: tamper-check compara contra o SHA do template **da
+  aplicação** (`.prova/template-ref`) — push de fix no template durante a
+  prova não gera mais falso tamper;
+- **`check_md.py`**: parser de fence segue CommonMark (evasão com 4 crases
+  conta como bloco; fence inline de uma linha não abre bloco) e `exams/` é
+  excluído da pontuação do critério E;
+- **`fechar_prova.py`**: `fora_da_janela` conta só commits após o fim da
+  janela (preparação não polui mais o teacher.json);
+- **`validar_exams.py`**: `extras` exige `faixa >= 1`, `passo` int e
+  `formato` com 1 placeholder; chave de workflow desconhecida vira **aviso**
+  (typo não desliga job em silêncio);
+- `score_publicos.py` e as suítes: arredondamento **half-up**;
+- `smoke_track.py`: header CORS case-insensitive; job `compila` com
+  `setup-python`; histórico da nota usa o teto real (não /100 fixo).
+
+### Adicionado
+
+- **Canários agênticos** (trampas para agentes de IA): comentários ocultos no
+  material das 3 tracks (`ENUNCIADO.md` da track-01, comentários Java/JSX da
+  track-02, README da track-03) instruem LLMs a inserir marcas detectáveis —
+  a esteira do docente (teacher-escola-ti) varre as entregas; suspeita vai
+  para revisão manual, nunca zero automático. Aviso de dissuasão em
+  `docs/REGRAS.md`.
+- **Tracks reais de 2026** com `contrato.json`, `rubrica.json`, `track.json`,
+  stubs e — na track-02 — a aplicação quebrada de propósito (11 erros em 3
+  camadas) e o `smoke_track.py` de checagens;
+- Gancho de testabilidade na track-01: `entrada` opcional no UC1 (+422
+  `entrada_invalida`) e precedência declarada 422-antes-de-409.
+
+### Alterado
+
+- **Dificuldade elevada nas 3 tracks** (feedback do docente: prova estava
+  simples para 1h30):
+  - track-01 (SDD): +4 casos de uso (UC5 cancelamento, UC6 histórico por
+    placa, UC7 tolerância gratuita — nova variante `TOLERANCIA_MINUTOS`,
+    UC8 placa duplicada 409) + precedência declarada 422-antes-de-409;
+  - track-02 (debugging): +3 erros plantados na camada Docker/compose
+    (`--from=builder` no Containerfile do backend, `npm ci` sem lockfile no
+    frontend, healthcheck do db com usuário errado) — 11 erros no total;
+  - track-03 (CRUD): +2 endpoints (rechamar, cancelar) + exigência de
+    concorrência (rajadas sem código duplicado);
+  - todas: declarado que os testes escondidos podem cobrar a gestão do SDLC
+    da entrega (higiene, segredos, linters genéricos).
+
 ## [1.1.0] — 2026-10-07
 
 Infraestrutura para as provas reais de 2026: o esqueleto passa a suportar os
@@ -117,5 +176,6 @@ Primeira versão oficial do sistema de provas.
 - Respostas do preparar fora de contexto (roteamento) e comentários duplicados
   (upsert).
 
+[1.2.0]: https://github.com/endersonmenezes/exam-escola-ti/releases/tag/v1.2.0
 [1.1.0]: https://github.com/endersonmenezes/exam-escola-ti/releases/tag/v1.1.0
 [1.0.0]: https://github.com/endersonmenezes/exam-escola-ti/releases/tag/v1.0.0

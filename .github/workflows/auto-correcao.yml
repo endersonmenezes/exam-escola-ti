@@ -195,6 +195,9 @@ jobs:
       # stack JVM por padrao (tracks de debugging 2026); outra stack = novo job
       # (ver "Estender o sistema" em docs/TRACKS.md)
       - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
       - uses: actions/setup-java@v6
         with:
           distribution: temurin

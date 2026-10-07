@@ -34,8 +34,8 @@ erros = int(m_erro.group(1)) if m_erro else 0
 
 total = peso_total()
 n_testes = passaram + falharam + erros
-por_teste = (total // n_testes) if n_testes else 0
-pontos = min(total, por_teste * passaram)
+# half-up: nao trunca o resto contra o aluno
+pontos = min(total, (total * passaram + n_testes // 2) // n_testes) if n_testes else 0
 obs = ["pytest: %d passed, %d failed, %d error" % (passaram, falharam, erros)]
 if passaram == 0 and falharam == 0 and erros == 0:
     obs.append("pytest nao produziu resumo — container nao subiu? Ver logs do job.")

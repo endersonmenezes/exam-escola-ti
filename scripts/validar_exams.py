@@ -33,9 +33,18 @@ def validar_extras(extras, prefixo):
         elif not (isinstance(cfg.get("base"), int) and isinstance(cfg.get("faixa"), int)):
             falhas.append("%s: variante.extras.%s precisa de opcoes(list) ou "
                           "base(int)+faixa(int)" % (prefixo, nome))
-        elif "formato" in cfg and not isinstance(cfg["formato"], str):
-            falhas.append("%s: variante.extras.%s.formato deve ser string"
-                          % (prefixo, nome))
+        else:
+            if cfg["faixa"] < 1:
+                falhas.append("%s: variante.extras.%s.faixa deve ser >= 1"
+                              % (prefixo, nome))
+            if "passo" in cfg and not isinstance(cfg["passo"], int):
+                falhas.append("%s: variante.extras.%s.passo deve ser int"
+                              % (prefixo, nome))
+            fmt = cfg.get("formato")
+            if fmt is not None and (not isinstance(fmt, str) or fmt.count("%") != 1):
+                falhas.append("%s: variante.extras.%s.formato deve ser string com "
+                              "exatamente 1 placeholder (ex.: prova_%%02d)"
+                              % (prefixo, nome))
     return falhas
 
 erros, avisos = [], []
@@ -87,10 +96,19 @@ for prefixo, pasta in pastas:
                                  % (prefixo, campo, tipo.__name__))
             wf = lock.get("workflows")
             if isinstance(wf, dict):
+                try:
+                    from track_lock import KNOWN_WORKFLOW_KEYS
+                    conhecidas = {k.split(".", 1)[1] for k in KNOWN_WORKFLOW_KEYS}
+                except Exception:
+                    conhecidas = set()
                 for chave, valor in wf.items():
                     if not isinstance(valor, bool):
                         erros.append("%s: track.json workflows.%s deve ser true/false"
                                      % (prefixo, chave))
+                    elif conhecidas and chave not in conhecidas:
+                        avisos.append("%s: track.json workflows.%s NAO e chave "
+                                      "conhecida (typo?) — sera ignorada"
+                                      % (prefixo, chave))
     # contrato.json
     cj = os.path.join(pasta, "contrato.json")
     if not os.path.exists(cj):

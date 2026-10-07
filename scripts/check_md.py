@@ -30,7 +30,7 @@ MAX_LINHAS_BLOCO = int(_cfg.get("max_linhas_bloco", 20))
 # Arquivos do esqueleto/template nao pontuam como especificacao do aluno.
 EXCLUIR = {"README.md", "ENUNCIADO.md", "ALUNO.md", "FONTES.md", "CHANGELOG.md"}
 EXCLUIR_PREFIXOS = (".github/", "scripts/", "docs/", "tests/", "variante/",
-                    "correcao/", "gabarito/", ".prova/")
+                    "correcao/", "gabarito/", ".prova/", "exams/")
 
 CHECKS = [
     # (regex de nome, verificador, descricao)
@@ -53,17 +53,25 @@ CHECKS = [
 
 
 def blocos_codigo(texto):
-    """retorna lista com o nº de linhas de cada bloco ```...```"""
-    blocos, dentro, atual = [], False, 0
+    """retorna lista com o nº de linhas de cada bloco de fence (``` ou mais).
+
+    Regras CommonMark que o parser ingenuo errava: fence de abertura so fecha
+    com fence de MESMO tamanho ou maior (evasao com 4 crases), e fence inline
+    de uma linha (```codigo```) nao abre bloco (falso fatal)."""
+    blocos, fence_len, atual = [], 0, 0
     for linha in texto.splitlines():
-        if linha.strip().startswith("```"):
-            if dentro:
-                blocos.append(atual)
+        m = re.match(r"^\s*(`{3,})(.*)$", linha)
+        if fence_len == 0:
+            if m and "`" not in m.group(2):
+                fence_len = len(m.group(1))
                 atual = 0
-            dentro = not dentro
-        elif dentro:
-            atual += 1
-    if dentro:
+        else:
+            if m and len(m.group(1)) >= fence_len and not m.group(2).strip():
+                blocos.append(atual)
+                fence_len = 0
+            else:
+                atual += 1
+    if fence_len:
         blocos.append(atual)
     return blocos
 

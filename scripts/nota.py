@@ -119,8 +119,8 @@ try:
     if anterior and "### Histórico" in anterior:
         secao = anterior.split("### Histórico", 1)[1]
         historico = [l for l in secao.splitlines() if l.strip().startswith("- ")]
-    entrada = "- %s · nota %d/100%s" % (
-        iso, nota, " · [run](%s)" % run_url if run_url else "")
+    entrada = "- %s · nota %d/%d%s" % (
+        iso, nota, teto + extras_teto, " · [run](%s)" % run_url if run_url else "")
     historico = (historico + [entrada])[-10:]
 
     texto_issue = "\n".join(

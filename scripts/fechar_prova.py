@@ -131,8 +131,8 @@ def main():
             track = json.load(open(track_path, encoding="utf-8")).get("track")
         except ValueError:
             pass
-    t0 = sh("git", "log", "--grep=aplicar prova", "--format=%ad",
-            "--date=iso-strict", "-1").strip()
+    t0 = sh("git", "log", "--grep=aplicar prova", "--author=github-actions",
+            "--format=%ad", "--date=iso-strict", "-1").strip()
     aplicada = bool(pasta and t0)
     motivo = None
     if not aplicada:
@@ -190,7 +190,9 @@ def main():
             t0dt = datetime.fromisoformat(t0)
             fim = t0dt + timedelta(minutes=minutos)
             fora = sum(1 for d in datas
-                       if not (t0dt <= datetime.fromisoformat(d) <= fim))
+                       if datetime.fromisoformat(d) > fim)
+            # commits ANTES do t0 sao fase de preparacao (setup, RA, FONTES)
+            # — nao sao "fora da janela"; o trampas os reporta como informativo
         except ValueError:
             fora = 0
 

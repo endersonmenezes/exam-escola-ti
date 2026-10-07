@@ -167,7 +167,7 @@ def main():
             corpo = """## Checklist do aluno
 
 - [ ] Meu `ALUNO.md` esta com **Nome e RA** corretos (o bot preencheu o nome pela sua conta GitHub — confira!)
-- [ ] Li as [regras comuns](docs/REGRAS.md) e sei o que precisa declarar em `FONTES.md`
+- [ ] Li as [regras comuns](https://github.com/REPO_FULL_PLACEHOLDER/blob/main/docs/REGRAS.md) e sei o que precisa declarar em `FONTES.md`
 - [ ] Sei que a pasta da prova ainda nao foi publicada — quando o professor publicar, o bot puxa a pasta escolhida (`exams/<ano>/<track>/`, ou a prova-teste `dummy-exam`) e ela **vira meu repositorio** (README, contrato e testes novos); o relogio da janela comeca no commit de aplicacao
 - [ ] Confirmo que vou entregar com commits **dentro da janela** contada a partir desse commit de aplicacao
 
@@ -177,6 +177,7 @@ Comente `/track <nome-da-pasta>` **nesta issue** para escolher qual prova aplica
 
 Ao marcar as caixas (ou comentar), o workflow **Preparar entrega** valida e responde aqui. A prova se encerra quando **voce fechar esta issue** — nesse momento o sistema gera o `teacher.json` de entrega. Duvidas? Comente aqui.
 """
+            corpo = corpo.replace("REPO_FULL_PLACEHOLDER", REPO_FULL)
             status, issue = api("POST", "/repos/%s/issues" % REPO_FULL,
                                 {"title": "🎯 Prova", "body": corpo,
                                  "labels": ["prova"]})
