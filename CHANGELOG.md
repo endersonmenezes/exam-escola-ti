@@ -8,6 +8,34 @@ Todas as mudanças notáveis do sistema de provas da Escola de TI
 > em prova real. As turmas que exercitaram o sistema até aqui usaram-no como
 > aula teste (prova dummy "Hello World").
 
+## [1.3.0] — 2026-10-07
+
+Track 03 (CRUD): a persistência agora aceita **os dois caminhos** — `/data`
+(single-container) ou banco externo via `compose.yaml` — e um compose limpo
+passa a ser embarcado na track.
+
+### Adicionado
+
+- **`compose.yaml` limpo em `exams/2026/track-03-crud/`**: serviço `app`
+  (build do `Containerfile`, `${PORTA_API:-8080}:8080`, volume nomeado
+  `app-data:/data`) + exemplo comentado de Postgres; o próprio arquivo explica
+  os dois modos de correção e as regras do modo compose (serviço `app`, porta
+  `${PORTA_API}`, volumes nomeados);
+- **Detecção de modo por hash**: `track.json` ganha o bloco `compose`
+  (`template_sha256`); `scripts/rodar_testes.sh` sobe o ambiente via
+  `docker compose up --build -d` quando o aluno **customizou** o compose
+  (sha256 diferente do template) e mantém o modo single-container quando o
+  arquivo está intacto ou ausente — quem não mexer não enfrenta caminho novo.
+  Schema documentado em `docs/TRACKS.md`.
+
+### Alterado
+
+- Track-03 (`README.md`, `contrato.json`, `rubrica.json`): a regra de
+  persistência declara os dois caminhos válidos — (a) `/data` (arquivo ou
+  banco embutido) ou (b) banco externo via `compose.yaml` customizado; a
+  suíte escondida recria o **serviço da API** (container ou serviço `app`)
+  e exige fila/sequência/painel preservados nos dois modos.
+
 ## [1.2.0] — 2026-10-07
 
 Prova 01 de 2026: as três tracks reais entram no repositório

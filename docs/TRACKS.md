@@ -50,6 +50,15 @@ estilos de prova) sem disparar o que não serve para a track atual.
     "frontend": false,
     "docker": true,
     "variante": true
+  },
+  "compose": {                       // opcional — track que embarca um compose.yaml OPCIONAL ao aluno
+    "arquivo": "compose.yaml",
+    "template_sha256": "<sha256 do compose.yaml embarcado>"
+    // As suites (publica e escondida) comparam o sha256 do compose.yaml do
+    // repo do aluno com este valor: DIFERENTE = aluno customizou → ambiente
+    // sobe via `docker compose up --build -d` (PORTA_API exportada) e o teste
+    // de persistência recria só o serviço `app`; IGUAL ou ausente = modo
+    // single-container (build do Containerfile + volume em /data).
   }
 }
 ```

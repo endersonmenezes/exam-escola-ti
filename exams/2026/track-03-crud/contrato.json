@@ -32,8 +32,8 @@
     "fuso": "-03:00",
     "base_url_suite": "http://localhost:{PORTA_API}",
     "sem_env_obrigatoria": true,
-    "persistencia": "Os testes PUBLICOS aceitam persistencia em memoria (container fresco). Mas a suite ESCONDIDA (correcao docente) recria seu container montando um volume em /data: seus dados (fila, sequencia, painel) devem SOBREVIVER a essa recriacao. Persista em arquivo/banco sob /data; se /data nao existir ou nao for gravavel (testes locais/publicos), pode cair em memoria.",
-    "observacao": "A suíte sobe o container com `docker run -p {PORTA_API}:8080` e aguarda GET /healthz responder 200. Data/hora em ISO-8601 com fuso -03:00."
+    "persistencia": "Os testes PUBLICOS aceitam persistencia em memoria (container fresco). A suite ESCONDIDA (correcao docente) recria o SERVICO da sua API e exige que fila, sequencia e painel SOBREVIVAM. Dois caminhos, os dois valem: (a) persistir sob /data (arquivo ou banco embutido, ex.: SQLite) — a suite monta um volume la; se /data nao existir ou nao for gravavel (testes locais/publicos), pode cair em memoria; ou (b) banco externo via compose.yaml — um compose limpo ja vem no repo; customize-o (servico da API chamado `app`, publicado na ${PORTA_API}, dados em volumes nomeados) e a suite sobe o ambiente inteiro via `docker compose`, recriando so o `app` no teste de persistencia (banco e volumes ficam de pe). compose.yaml intacto ou ausente = modo (a).",
+    "observacao": "No modo padrao a suite sobe o container com `docker run -p {PORTA_API}:8080 -v <volume>:/data`; se voce customizou o compose.yaml, sobe com `docker compose up --build -d` (PORTA_API exportada) e publica pela sua compose. Em ambos, aguarda GET /healthz responder 200. Data/hora em ISO-8601 com fuso -03:00."
   },
   "endpoints": [
     {
@@ -211,7 +211,7 @@
   "exigencias_tecnicas": [
     "API escuta na porta 8080 DENTRO do container",
     "Containerfile na raiz: o build seguido de `run -p {PORTA_API}:8080` deve subir a API sem variaveis de ambiente obrigatorias",
-    "Persistencia sob /data: a suite escondida recria o container com volume montado em /data e exige fila/sequencia/painel preservados (publicos nao exigem — memoria basta neles)",
+    "Persistencia: (a) sob /data (volume montado pela suite) ou (b) banco externo via compose.yaml customizado (servico `app`, porta ${PORTA_API}, volumes nomeados); a suite escondida recria o servico da API e exige fila/sequencia/painel preservados (publicos nao exigem — memoria basta neles)",
     "Data/hora em ISO-8601 com fuso -03:00",
     "Status code, formato de payload e validacao errados contam como teste falho — a suíte e binaria por caso de teste, sem 'meio ponto'",
     "Concorrencia: emissoes simultaneas NUNCA podem repetir codigo (a suite escondida dispara rajadas concorrentes)",

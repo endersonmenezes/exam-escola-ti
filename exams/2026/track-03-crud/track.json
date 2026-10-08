@@ -24,5 +24,10 @@
     "frontend": false,
     "docker": true,
     "variante": true
+  },
+  "compose": {
+    "arquivo": "compose.yaml",
+    "template_sha256": "0f5a89f290ad31c4b747d18f1d64039422badc86068c7429d8f03527e36163ef",
+    "observacao": "Compose OPCIONAL: compose.yaml customizado pelo aluno (sha256 diferente do template) faz as suites (publica e escondida) subirem o ambiente via `docker compose up --build -d` e recriarem so o servico `app` no teste de persistencia; compose intacto ou ausente = modo single-container (build do Containerfile + volume em /data)."
   }
 }
