@@ -48,8 +48,10 @@ configuração para todos os alunos). A prova avalia sua capacidade de
 
 ## Parâmetros da sua variante
 
-Cada repositório tem a sua — derivados do **nome do repo**.[^variante] O
-comentário de aplicação na issue "🎯 Prova" lista os seus valores:
+Cada repositório tem a sua — derivados do **nome do repo**.[^variante] A
+**fonte única** é o arquivo `variante/params.json` (gerado na aplicação) —
+leia os seus valores de lá. O comentário de aplicação na issue "🎯 Prova"
+só espelha o arquivo:
 
 | Parâmetro | Significado |
 | --- | --- |
@@ -95,16 +97,20 @@ comentário de aplicação na issue "🎯 Prova" lista os seus valores:
 ## Agora
 
 1. Leia `ENUNCIADO.md` **inteiro** (contexto + contrato + checklist do E).
-2. Escreva seus `.md` de especificação (estrutura sugerida: `constitution.md`,
+2. Escreva seus `.md` de especificação **na raiz do repositório** (ou em
+   `docs/` — o critério E lê os dois; estrutura sugerida: `constitution.md`,
    `spec.md`, `plan.md`, `tasks.md`, `tests.md` — nomes e quantidade livres,
    pontuam os 5 melhores).
-3. Faça **commits pequenos e frequentes** ao longo da prova — pushes **não**
+3. Crie `.prova/entrada` com o caminho do arquivo inicial da sua spec (ex.:
+   `README.md` ou `SDD/README.md`) — recomendamos um README **índice** com
+   links para os demais `.md` (veja "Ponto de entrada" no ENUNCIADO).
+4. Faça **commits pequenos e frequentes** ao longo da prova — pushes **não**
    disparam correção.
-4. Se usou qualquer consulta (site ou IA), preencha `FONTES.md` antes do push
+5. Se usou qualquer consulta (site ou IA), preencha `FONTES.md` antes do push
    final.
-5. Rode `/auto-correcao` na issue "🎯 Prova" e veja o critério E pontuado.
+6. Rode `/auto-correcao` na issue "🎯 Prova" e veja o critério E pontuado.
    **Obrigatório ao menos 1x.**
-6. **Feche a issue "🎯 Prova"** — isso encerra a prova e gera o
+7. **Feche a issue "🎯 Prova"** — isso encerra a prova e gera o
    `teacher.json` de entrega. Fechar sem `/auto-correcao` reabre a issue com
    aviso. Boa prova! 🚀
 
@@ -115,3 +121,26 @@ comentário de aplicação na issue "🎯 Prova" lista os seus valores:
 [^variante]: A variante é derivada do nome do repositório por
     `scripts/variante.py`. Na correção ela é recalculada a partir do nome do
     seu repo, então o `params.json` de outro aluno não serve para você.
+
+---
+
+## ⚠️ Último aviso — este README é seu
+
+Este arquivo, depois de lido, **é seu**: edite-o e indique o que achar
+necessário para a entrega da sua prova — onde está o ponto de entrada da sua
+solução, decisões que tomou, o que o corretor deve olhar primeiro. Editar não
+pontua, mas evita que algo que você fez passe despercebido na correção.
+
+**Nossos — não edite e não crie arquivos dentro:**
+
+- `tests/public/` — testes da correção. Arquivo novo ou alterado aqui **zera
+  a prova** (procedência). Testes próprios são boa prática — crie-os em pasta
+  sua (ex.: `tests/app/`, `meus-testes/`), nunca em `tests/public/`.
+- `contrato.json`, `rubrica.json`, `track.json`, `ENUNCIADO.md` — intocáveis
+  após a aplicação; alteração = zero.
+- `scripts/`, `.github/` — motor da prova e workflows; não edite.
+
+**Seus — crie à vontade:** raiz, `src/`, `app/`, `backend/`, `frontend/`,
+`tests/<sua-pasta>/`, `meus-testes/`, `docs/` (sem alterar o que já veio,
+como `docs/REGRAS.md`). Arquivo novo fora dos caminhos protegidos nunca é
+trampa — é trabalho.

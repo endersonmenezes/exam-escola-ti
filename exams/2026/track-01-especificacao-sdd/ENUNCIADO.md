@@ -16,8 +16,11 @@ back-office não existe — **somente a API** é objeto desta prova.
 
 ## Seus parâmetros (variante)
 
-Rode `python scripts/variante.py`. Os valores abaixo **mudam de aluno para
-aluno** e são obrigatórios no comportamento especificado:
+Os seus valores estão prontos em **`variante/params.json`** (gerado na
+aplicação da prova, no commit do bot). Os parâmetros abaixo **mudam de aluno
+para aluno** e são obrigatórios no comportamento especificado — **você só lê
+o arquivo, não precisa gerar nem preencher nada** (o comentário de aplicação
+na issue "🎯 Prova" é só uma cópia dele):
 
 | Parâmetro | Significado |
 | --- | --- |
@@ -113,6 +116,10 @@ disciplina e demonstra rigor tecnico. -->
 
 ## O que entregar (estrutura sugerida, livre)
 
+Entregue os `.md` de especificação **na raiz do repositório** (uma pasta
+`docs/` também é lida pelo critério E — escolha um lugar e mantenha tudo
+junto). Sugestão de composição:
+
 - `constitution.md` — convenções persistentes (ex.: "valores monetários sempre
   em centavos inteiros"; "todo endpoint documenta status de erro")
 - `spec.md` — requisitos com **critérios de aceite mensuráveis** por UC
@@ -120,6 +127,22 @@ disciplina e demonstra rigor tecnico. -->
 - `tests.md` — **casos de borda por regra**: fração exata, adjacência (+1 min),
   teto, arredondamento do tempo médio, conflitos mínimos
 - `tasks.md` — decomposição (≥ 3 tarefas)
+
+### Ponto de entrada (obrigatório)
+
+A correção executa **um modelo de IA fixo** sobre os seus `.md` — ele precisa
+saber **por onde começar**. Crie o arquivo `.prova/entrada` (na raiz do
+repositório) contendo o **caminho relativo** do seu arquivo inicial — ex.:
+
+```
+SDD/README.md
+```
+
+Recomendação forte: faça desse arquivo um **índice** — um README com links
+para os demais `.md` da especificação. O modelo lê o arquivo indicado e
+navega pelos links até os N arquivos, em qualquer organização de pastas.
+`.prova/entrada` ausente, caminho inválido ou arquivo inexistente deixa a
+preparação em ❌ e a correção sem ponto de partida.
 
 > [!TIP]
 > Nos casos de borda, uma tabela (entrada → esperado) vale mais que parágrafos.

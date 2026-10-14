@@ -43,7 +43,7 @@ import urllib.request
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(BASE, "scripts"))
-from variante import slug_do_repo, pasta_do_ano, variante  # noqa: E402
+from variante import slug_do_repo, pasta_do_ano, variante, parametros_ano  # noqa: E402
 import prova_issue  # noqa: E402
 import selecao  # noqa: E402
 
@@ -191,6 +191,45 @@ def main():
     if os.path.isdir(origem):
         shutil.rmtree(origem)
 
+    # 4b) LIMPEZA pos-overlay: o repo gerado a partir do template carrega a
+    #     arvore exams/ INTEIRA (a pasta do ano e o dummy ficam publicados na
+    #     main do template antes da geracao do repo). Pos-overlay o conteudo
+    #     da pasta aplicada ja virou a RAIZ; o restante de exams/ e so lixo
+    #     e armadilha — caso real da turma 2026: um aluno fez a prova inteira
+    #     dentro de exams/2026/track-03-crud/... porque a pasta estava na
+    #     frente dele. Seguro remover: nada que o CI/correcao leem mora em
+    #     exams/ (contrato/rubrica/track.json na raiz, suites em tests/public
+    #     e scripts/), o validar-exams so roda no template e o tamper T3
+    #     protege scripts//.github//docs/ (exams/ nunca entra). Idempotente:
+    #     re-runs e o polling encontram exams/ ja ausente.
+    exams_dir = os.path.join(BASE, "exams")
+    if os.path.isdir(exams_dir):
+        shutil.rmtree(exams_dir)
+    git("rm", "-r", "--quiet", "--cached", "exams", "--ignore-unmatch")
+
+    # 4c) LIMPEZA de itens do TEMPLATE que nao fazem sentido no repo do aluno.
+    #     So tocamos caminhos FORA dos protegidos pelo tamper T3 (scripts/,
+    #     .github/, docs/ sao comparados com o template — nunca os tocamos
+    #     aqui). CHANGELOG.md e o historico do SISTEMA de provas: no repo do
+    #     aluno e ruido e convida a confusao ("meu repo tem changelog de que?").
+    for nome in ("CHANGELOG.md",):
+        alvo = os.path.join(BASE, nome)
+        if os.path.exists(alvo):
+            os.remove(alvo)
+        git("rm", "--quiet", "--cached", "--ignore-unmatch", nome)
+    # varredura defensiva: nenhum artefato de bytecode/python pode vir com a
+    # pasta aplicada (dummy ja teve __pycache__ versionado no disco uma vez).
+    for raiz, dirs, arquivos in os.walk(BASE):
+        if ".git" in raiz.split(os.sep):
+            continue
+        for d in list(dirs):
+            if d == "__pycache__":
+                shutil.rmtree(os.path.join(raiz, d))
+                dirs.remove(d)
+        for a in arquivos:
+            if a.endswith((".pyc", ".pyo")):
+                os.remove(os.path.join(raiz, a))
+
     with open(sentinela, "w", encoding="utf-8") as f:
         f.write(pasta + "\n")
     with open(os.path.join(BASE, ".prova", "exam-dir"), "w", encoding="utf-8") as f:
@@ -205,7 +244,8 @@ def main():
                      .get("janela_minutos", 120))
     v = variante(REPO)
     os.makedirs(os.path.join(BASE, "variante"), exist_ok=True)
-    with open(os.path.join(BASE, "variante", "params.json"), "w", encoding="utf-8") as f:
+    params_path = os.path.join(BASE, "variante", "params.json")
+    with open(params_path, "w", encoding="utf-8") as f:
         json.dump(v, f, ensure_ascii=False, indent=2)
     # selecao ja aconteceu: o lembrete de /track sai (entra neste commit)
     lembrete = os.path.join(BASE, ".prova", "track-lembrete")
@@ -224,9 +264,19 @@ def main():
         print("push falhou:", r.stderr)
         return
 
-    # 7) comentario na issue UNICA da prova (nada de issue nova)
+    # 7) comentario na issue UNICA da prova (nada de issue nova).
+    # Fonte unica da variante: o params.json acima — o comentario RELÊ o
+    # arquivo gravado (em vez de reformatar o dict em memoria) e declara isso
+    # para o aluno. As descricoes vêm de `variante.uso` do contrato da track
+    # (quando existem — dummy nao tem) com fallback generico.
     if TOKEN and REPO_FULL:
         n_issue = prova_issue.numero()
+        with open(params_path, encoding="utf-8") as f:
+            v_arquivo = json.load(f)
+        try:
+            usos = parametros_ano(pasta).get("uso", {}) or {}
+        except SystemExit:
+            usos = {}
         DESCRICOES = {
             "PREFIXO": "nome que a suíte envia em `/saudar` (o `nome` da sua saudação)",
             "RAZAO_PREFERENCIAL": "valor de `repeticoes` usado no teste da sua variante",
@@ -234,14 +284,19 @@ def main():
             "EXAM_DIR": "pasta da prova aplicada",
         }
         params = "\n".join(
-            "- `%s` = %s — %s" % (k, val, DESCRICOES[k]) if k in DESCRICOES
+            "- `%s` = %s — %s" % (k, val, usos.get(k) or DESCRICOES[k]) if k in usos or k in DESCRICOES
             else "- `%s` = %s" % (k, val)
-            for k, val in v.items() if k != "slug")
+            for k, val in v_arquivo.items() if k != "slug")
         corpo = ("## ✅ Prova aplicada neste repositorio\n\n"
-                 "Pasta: `%s` — a janela da prova é de **%d minutos**, "
+                 "Pasta aplicada por overlay: `%s` — o conteúdo dela **é a "
+                 "raiz do seu repo agora** (a árvore antiga de `exams/` foi "
+                 "removida neste commit; trabalhe na raiz, não em `exams/`). "
+                 "A janela da prova é de **%d minutos**, "
                  "contados a partir do commit de aplicacao. O relogio ja esta "
                  "rodando.\n\n"
-                 "Sua variante (unica do seu repo):\n\n%s\n\n"
+                 "**Sua variante** — cópia fiel de `variante/params.json`, "
+                 "que é a **fonte única** dos seus parâmetros (gerada agora; "
+                 "você só precisa LER o arquivo, não gerar nada):\n\n%s\n\n"
                  "> Leia o contrato, desenvolva, preencha `FONTES.md` se "
                  "consultar algo e de push antes do fim da janela. A nota "
                  "parcial sai no workflow *Auto-correcao* (Summary + "

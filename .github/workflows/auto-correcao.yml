@@ -39,8 +39,10 @@ env:
 jobs:
   config:
     name: Lockfile da track (liga/desliga os jobs)
-    # sobe para dispatch ou para comentario "/auto-correcao" na issue
-    if: github.repository != 'endersonmenezes/exam-escola-ti' && (github.event_name != 'issue_comment' || contains(github.event.comment.body, '/auto-correcao'))
+    # sobe para dispatch ou para pedido de correção na issue — com tolerância
+    # aos formatos digitados errado pelos alunos (casos reais da turma 2026:
+    # "/auto-correção", "/autocorrecao", "/auto correcao")
+    if: github.repository != 'endersonmenezes/exam-escola-ti' && (github.event_name != 'issue_comment' || contains(github.event.comment.body, '/auto-correcao') || contains(github.event.comment.body, '/auto-correção') || contains(github.event.comment.body, '/autocorrecao') || contains(github.event.comment.body, '/auto correcao'))
     runs-on: ubuntu-slim
     outputs:
       aplicada: ${{ steps.lock.outputs.aplicada }}

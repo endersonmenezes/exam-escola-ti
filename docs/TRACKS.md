@@ -82,7 +82,18 @@ estilos de prova) sem disparar o que não serve para a track atual.
 > Containerfile) liga `md` e desliga `estrutura`/`testes-publicos`; o job `md`
 > roda `scripts/check_md.py` com a config de `suites.md` do lockfile:
 > `{"pontos": 15, "pts_por_arquivo": 3, "max_linhas_bloco": 20}` (bloco de
-> código maior que o limite = fatal, nota 0 via job de nota).
+> código maior que o limite = fatal, nota 0 via job de nota). O checker lê
+> `.md` da raiz **e de `docs/`** (o matching é por nome de arquivo; os docs do
+> esqueleto `docs/REGRAS.md`/`docs/TRACKS.md` são excluídos por caminho
+> exato) — e o enunciado da track deve dizer **explicitamente** onde o `.md`
+> vai (caso real 2026: specs em `docs/` zeraram o critério E porque o prefixo
+> `docs/` inteiro era excluído). Tracks SDD podem declarar
+> `"entrada": true` em `suites.md`: passa a ser obrigatório o aluno criar
+> `.prova/entrada` com o caminho relativo do arquivo inicial da spec (ex.:
+> `SDD/README.md` — recomenda-se um README índice com links); o *Preparar
+> entrega* valida existência/caminho na issue e o `fechar_prova.py` leva o
+> caminho ao `teacher.json` (campo opcional `entrada`) para a correção por
+> modelo saber por onde começar.
 
 > Uma track de **debugging** (app quebrada em containers, ciclo
 > build→logs→corrigir) desliga `estrutura`/`testes-publicos`/`md` e liga os
@@ -130,8 +141,10 @@ preencher seus `outputs`; os demais jobs consomem via
 > Fechar a issue exige ao menos 1 correção: o *Fechar prova* procura o
 > marcador `<!-- nota-parcial -->` (upsert do nota.py) nos comentários e,
 > se ausente, **reabre a issue com aviso** em vez de gerar o `teacher.json`.
-> Comandos na issue: `/track <nome>`, `/aplicar`, `/auto-correcao` e
-> `/ajuda`/`--help` (lista, atendido pelo *Preparar entrega*).
+> Comandos na issue: `/track <nome>` (seleção — dispara a aplicação),
+> `/auto-correcao` e `/ajuda`/`--help` (lista, atendido pelo *Preparar
+> entrega*). (`/aplicar` existia para forçar a aplicação manualmente e foi
+> descontinuado — o `/track` já aplica sozinho; quem comentar recebe o aviso.)
 
 ## Como criar uma NOVA track (checklist para LLM/humano)
 
@@ -145,7 +158,11 @@ preencher seus `outputs`; os demais jobs consomem via
    `track.json` para a raiz de um clone de teste e rode o check lá).
 3. **Contrato**: siga o schema de `contrato.json` (seção `variante` com as
    tabelas de parâmetros — a variante do aluno deriva do nome do repo;
-   `endpoints` detalhados; bloco `frontend` se `recursos.frontend`).
+   `endpoints` detalhados; bloco `frontend` se `recursos.frontend`). Os
+   enunciados/READMEs da track apontam o aluno para **ler
+   `variante/params.json`** (fonte única, gerado no commit de aplicação) —
+   nunca para executar `scripts/variante.py` nem para preencher/criar
+   arquivo de variante; o comentário de aplicação na issue espelha o arquivo.
    Tabelas de variante: as chaves núcleo (`PREFIXOS`, `RAZOES`, `PORTA_BASE`,
    `FAIXA`) cobrem tracks estilo API/juiz; tracks com outros parâmetros usam
    `variante.extras` — cada entrada é `{"opcoes": [...]}` (escolha por módulo)
@@ -159,7 +176,7 @@ preencher seus `outputs`; os demais jobs consomem via
    `from variante import slug_do_repo, variante`, e falham com mensagem que
    ajuda o aluno (sem revelar os casos escondidos).
 6. **Teste o ciclo inteiro** com um repo de teste gerado do template:
-   setup → issue → comentar "aplicar" → conferir overlay (track.json na raiz)
+   setup → issue → comentar `/track <nome>` → conferir overlay (track.json na raiz)
    → push de código → jobs que o lockfile ligou devem rodar, os demais
    `skipped` → nota no Summary.
 7. **Nunca** edite `scripts/`, `.github/workflows/` do esqueleto dentro da
@@ -180,3 +197,13 @@ preencher seus `outputs`; os demais jobs consomem via
 - ❌ Esquecer `lockfile_version` — sem ele o `check` falha.
 - ❌ Depender de recursos fora do repo do aluno (a suíte escondida mora no
   repo de correção, acessado só via `CORRECAO_TOKEN`).
+- ❌ Pedir ao aluno que **gere ou preencha** a variante (rodar
+  `scripts/variante.py`, criar/editar json de parâmetros): cria uma segunda
+  fonte de verdade e confusão (caso real da turma 2026). A variante é gerada
+  pelo sistema no commit de aplicação; o aluno só lê
+  `variante/params.json`.
+- ❌ Enunciado que não diz **onde** o entregável vai (pasta, nome): o aluno
+  segue a pasta que vê na frente dele — caso real 2026: a prova inteira feita
+  dentro de `exams/2026/track-03-crud/...` (a árvore `exams/` do template
+  ficava no repo do aluno; hoje o aplicar a remove no commit de aplicação,
+  mas o enunciado continua precisando dizer o lugar certo em voz alta).

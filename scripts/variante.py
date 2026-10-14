@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
-"""Variante do aluno — genérica, lê os parâmetros da pasta do ano.
+"""Variante do aluno — genérica, lê os parâmetros do contrato da prova.
 
 A variante é DETERMINÍSTICA: derivada do nome do repositório + das tabelas da
-seção `variante` do `contrato.json` da pasta do ano (`exams/<ano>/<track>/`).
-A correção recompute os mesmos valores, então copiar arquivos de colega não
-funciona.
+seção `variante` do `contrato.json` da prova. Pós-aplicação o contrato vive
+na RAIZ do repo do aluno (overlay); o marcador `.prova/exam-dir` guarda de
+onde veio. A correção recompute os mesmos valores, então copiar arquivos de
+colega não funciona.
 
-Antes da prova ser aplicada não existe pasta do ano — variante() lança erro
-nesse caso (setup da prova não depende de variante; só a aplicação e a
+Antes da prova ser aplicada não existe contrato da prova — variante() lança
+erro nesse caso (setup da prova não depende de variante; só a aplicação e a
 correção dependem).
 """
 import glob

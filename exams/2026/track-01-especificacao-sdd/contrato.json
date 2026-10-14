@@ -249,7 +249,7 @@
     "por_que_esta_errado": "O contrato exige valor_centavos inteiro (ex.: 1250), nunca ponto flutuante ('valor': 12.50), alem dos campos placa/entrada/saida/minutos."
   },
   "entregavel": {
-    "descricao": "Especificacoes em .md (NUNCA codigo): constitution.md, spec.md, plan.md, tests.md, tasks.md — nomes e quantidade livres, pontuam os 5 melhores",
+    "descricao": "Especificacoes em .md (NUNCA codigo), na raiz do repositorio (docs/ tambem e lido): constitution.md, spec.md, plan.md, tests.md, tasks.md — nomes e quantidade livres, pontuam os 5 melhores",
     "criterio_E_checklist": {
       "constitution.md": ">= 1 regra operacional concreta",
       "spec.md": ">= 1 criterio de aceite mensuravel por UC",

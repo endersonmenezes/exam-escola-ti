@@ -199,18 +199,40 @@ def norm(t):
 
 
 pre_aplicacao = []
+entre_setup_e_t0 = []
 if ini and fim:
     ini, fim = norm(ini), norm(fim)
-    # janela pega so quem PASSOU do fim; commits ANTES do t0 sao fase de
-    # preparacao (preencher RA, FONTES.md, selecionar track) — informativo
+    # janela pega so quem PASSOU do fim (tardios = a trampa real). O marco da
+    # "fase de preparacao" e o SETUP do repo (bot), nao o commit de aplicacao:
+    # na turma 2026 os alunos comecavam a prova no inicio da aula e o
+    # /track+aplicacao chegava minutos depois — commits entre o setup e o t0
+    # sao trabalho valido, nao "preparacao" (falso positivo em quase todas
+    # as issues; ex.: t0 19:27 com trabalho valido desde 19:11). Sem commit
+    # de setup (repo legado/clonado na mao), volta o criterio antigo (antes
+    # do t0).
     tardios = [l for l in commits if l.split("|")[2] > fim]
-    pre_aplicacao = [l for l in commits if l.split("|")[2] < ini]
+    ts = sh("git", "log", "--format=%ad", "--date=format:%Y-%m-%dT%H:%M:%S",
+            "--grep=setup inicial da prova", "--author=github-actions",
+            "-1").strip()
+    if ts:
+        pre_aplicacao = [l for l in commits if l.split("|")[2] < ts]
+        entre_setup_e_t0 = [l for l in commits if ts <= l.split("|")[2] < ini]
+    else:
+        pre_aplicacao = [l for l in commits if l.split("|")[2] < ini]
     if tardios:
         alerts.append("%d commit(s) do aluno DEPOIS do fim da janela (%s) — revisar."
                       % (len(tardios), fim))
     if pre_aplicacao:
-        obs_fontes.append("%d commit(s) do aluno ANTES da aplicacao (fase de "
-                          "preparacao) — informativo." % len(pre_aplicacao))
+        if ts:
+            obs_fontes.append("%d commit(s) do aluno ANTES do setup do repo (fase "
+                              "de preparacao) — informativo." % len(pre_aplicacao))
+        else:
+            obs_fontes.append("%d commit(s) do aluno ANTES da aplicacao (fase "
+                              "de preparacao) — informativo." % len(pre_aplicacao))
+    if entre_setup_e_t0:
+        obs_fontes.append("%d commit(s) do aluno entre o setup e o commit de "
+                          "aplicacao (inicio de aula; trabalho valido dentro "
+                          "da janela) — informativo." % len(entre_setup_e_t0))
 else:
     obs_fontes.append("Janela indisponivel (sem aplicacao nem dispatch manual) — T4 desarmado.")
 
@@ -257,6 +279,7 @@ else:
 resultado = {"job": "trampas", "repo": REPO, "commits": len(commits),
              "commits_bot": commits_bot,
              "commits_pre_aplicacao": len(pre_aplicacao),
+             "commits_pre_t0_pos_setup": len(entre_setup_e_t0),
              "alerts": alerts, "fatal": fatal, "obs": obs_fontes}
 with open(os.path.join(BASE, "result-trampas.json"), "w", encoding="utf-8") as f:
     json.dump(resultado, f, ensure_ascii=False, indent=2)

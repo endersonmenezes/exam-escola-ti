@@ -8,6 +8,123 @@ Todas as mudanças notáveis do sistema de provas da Escola de TI
 > em prova real. As turmas que exercitaram o sistema até aqui usaram-no como
 > aula teste (prova dummy "Hello World").
 
+## [1.4.0] — 2026-10-14
+
+Mudanças pós-aplicação da Prova 01/2026 (feedback do docente com ~68 alunos):
+unificação da fonte da variante, simplificação do fluxo de aplicação,
+limpeza do repo do aluno, ponto de entrada da spec SDD e fim do falso
+positivo de "commits antes da aplicação". Vale para a próxima aplicação — a
+prova de 07/10/2026 não é afetada.
+
+### Corrigido
+
+- **Repo do aluno ia para a prova carregando a árvore `exams/` inteira** (a
+  pasta do ano fica publicada no template antes da geração dos repos). O
+  overlay copiava a pasta escolhida para a raiz, mas o restante de `exams/`
+  ficava no repo — caso real: um aluno fez a prova inteira dentro de
+  `exams/2026/track-03-crud/...`. O *Aplicar prova* agora **remove `exams/`
+  no commit de aplicação** (idempotente; nada que o CI/correcao leem mora
+  lá; validar-exams só roda no template; tamper T3 protege
+  `scripts/`/`.github/`/`docs/`, não `exams/`);
+- **Falso positivo "N commit(s) ANTES da aplicacao (fase de preparacao)"**
+  (aparecia em quase toda issue): o marco era o commit de aplicação (t0), mas
+  os alunos começam a prova no início da aula e o `/track`+aplicação chega
+  minutos depois — commits válidos da janela eram rotulados "preparação".
+  Agora o marco é o **commit de setup** do repo: antes dele = preparação;
+  entre setup e t0 = mensagem neutra ("inicio de aula; trabalho valido");
+  a trampa real (`fora_da_janela`, depois do fim) não muda. Sem commit de
+  setup (repo legado), comportamento antigo. `teacher.json` ganha
+  `commits.pre_aplicacao` (pré-setup) e `commits.pre_t0_pos_setup` (opcionais);
+- **Critério E não lia specs em `docs/`** (caso real da turma 2026): o
+  enunciado da track-01 sugeria os arquivos de spec sem dizer a pasta, um
+  aluno entregou tudo em `docs/` (pasta natural para `.md`) e o `check_md.py`
+  pontuou 0/15 sem ler os arquivos — o prefixo `docs/` inteiro era excluído.
+  Agora a exclusão é por caminho exato (`docs/REGRAS.md`, `docs/TRACKS.md`),
+  specs em `docs/` pontuam normalmente, e o enunciado/README da track-01 diz
+  explicitamente onde os `.md` vão (raiz, com `docs/` tolerado).
+
+- **Duas fontes de variante — `variante/params.json` é a fonte única**: os
+  enunciados das tracks 01 e 02 pedia para o aluno RODAR
+  `python scripts/variante.py` (antes da aplicação isso gerava um
+  `params.json` com os parâmetros da **track errada**, por causa do fallback
+  de descoberta da pasta do ano) e os READMEs apontavam para "o comentário da
+  issue" como lista de valores. Agora todo enunciado/README (tracks 01/02/03
+  e dummy) aponta para **ler** `variante/params.json` — gerado no commit de
+  aplicação, nunca pelo aluno — e o comentário de aplicação na issue declara
+  ser só uma cópia dele;
+- **Comentário de aplicação gerado a partir do arquivo**: `aplicar_prova.py`
+  relê o `variante/params.json` gravado (em vez de reformatar o dict em
+  memória) e usa as descrições de `variante.uso` do contrato da track — o
+  texto genérico do dummy ("nome que a suíte envia em `/saudar`") não vaza
+  mais para tracks onde o parâmetro significa outra coisa;
+- **"❌ rode `python scripts/variante.py`" antes da aplicação**: em ~30% dos
+  repos analisados da turma 2026 o upsert de preparação ficou travado nessa
+  mensagem — o fallback de `pasta_do_ano()` encontra `exams/<ano>` herdada da
+  geração do repo e validava a variante antes da prova existir (um aluno
+  digitou o comando como comentário na issue). `preparar_entrega.py` só
+  valida a variante quando a aplicação de fato aconteceu (marcador
+  `.prova/exam-dir`/`contrato.json` na raiz); antes dela, mensagem ⏳ sem
+  ação pedida. Mensagens de divergência/ausência pós-aplicação também deixam
+  de pedir script no escopo errado;
+- **Comandos digitados errado silenciados**: o gatilho da auto-correção agora
+  tolera os formatos reais digitados pelos alunos — `/auto-correção`,
+  `/autocorrecao` e `/auto correcao` (antes: silêncio total, sem correção);
+- **Gatilho falso do aplicar-prova**: o `if` do workflow aceitava qualquer
+  comentário contendo a palavra "aplicar" (ex.: "quando vai ser aplicada?") —
+  agora só dispara para `/track <nome>` ou `/aplicar`.
+
+### Alterado
+
+- **Ponto de entrada da spec (SDD)**: a correção por modelo fixo precisa saber
+  por onde começar a ler os `.md` (na turma 2026 as specs apareceram em ~12
+  pastas diferentes). Track-01 passa a exigir `.prova/entrada` — arquivo com
+  o caminho relativo do arquivo inicial (recomenda-se um README índice com
+  links); o *Preparar entrega* valida existência/caminho na issue (exigência
+  declarada por `suites.md.entrada` no `track.json` da track, para as
+  próximas tracks reutilizarem) e o `teacher.json` ganha o campo opcional
+  `entrada` com o caminho declarado;
+- **`/aplicar` descontinuado**: o comando deixou de existir no `/ajuda`, nos
+  docs e no checklist — a aplicação já é consequência direta do `/track`.
+  Quem comentar `/aplicar` recebe um aviso de descontinuação (upsert
+  `<!-- aplicar-deprecado -->`) e o gatilho do workflow foi mantido só por
+  compatibilidade (idempotente);
+- **Ordem do processo explicitada (web-first)**: checklist da issue, README de
+  primeiros passos e boas-vindas agora instruem o aluno a fazer tudo pela
+  interface web até o comentário "✅ Prova aplicada" e **clonar/fazer pull só
+  depois** — commits locais antes da aplicação só geravam ruído
+  ("N commit(s) antes da aplicação") e tamper falsos.
+- **Limpeza pós-aplicação ampliada** (`aplicar_prova.py`, passo 4c): além da
+  árvore `exams/` (commit anterior), o commit de aplicação agora remove
+  `CHANGELOG.md` do template (histórico do sistema de provas, sem sentido no
+  repo do aluno) e varre `__pycache__/`/`*.pyc`/`*.pyo` que vierem com a pasta
+  aplicada. Caminhos protegidos pelo tamper T3 (`scripts/`, `.github/`,
+  `docs/`) nunca são tocados — a limpeza só age fora deles. Simulado de ponta
+  a ponta em repo temporário: raiz final = só os arquivos da track +
+  esqueleto funcional;
+- **Template sem bytecode no disco**: `exams/dummy-exam/__pycache__/` (que o
+  overlay levaria para a raiz do repo do aluno) e `scripts/__pycache__/`
+  removidos do template — o `.gitignore` já os bloqueava, mas o disco do
+  template alimentava repos novos;
+- **`variante.py`**: docstring alinhada ao comportamento real (lê o contrato
+  da RAIZ pós-overlay; `.prova/exam-dir` marca a origem).
+
+### Adicionado
+
+- **"⚠️ Último aviso — este README é seu"** ao final de todo README de track
+  (01/02/03 + dummy): o aluno é convidado a editar o README depois de lê-lo e
+  a indicar o que achar necessário para a entrega — onde está o ponto de
+  entrada da solução, decisões que tomou, o que o corretor deve olhar primeiro
+  (editar não pontua; evita que o básico feito passe despercebido). Motivação
+  real da turma 2026: entregas fora do lugar esperado que o corretor não
+  localizou, e o caso de um aluno que criou testes próprios **dentro** de
+  `tests/public/` e foi zerado por procedência — criar testes é boa prática,
+  desde que fora das pastas da correção. O aviso separa explicitamente o que
+  é nosso (`tests/public/`, `contrato.json`, `rubrica.json`, `track.json`,
+  `ENUNCIADO.md`, `scripts/`, `.github/` — não editar nem criar arquivos
+  dentro) do que é dele (todo o resto: raiz, `src/`, `app/`, `backend/`,
+  `frontend/`, `tests/<sua-pasta>/`, `meus-testes/`, `docs/` sem alterar o
+  que já veio).
+
 ## [1.3.0] — 2026-10-07
 
 Track 03 (CRUD): a persistência agora aceita **os dois caminhos** — `/data`

@@ -75,14 +75,18 @@ def readme_primeiros_passos(numero_issue):
     url = url_issue(numero_issue)
     return (badge(numero_issue) + "\n\n"
             "# Sua prova — primeiros passos\n\n"
-            "1. **Edite `ALUNO.md`** com seu nome/RA (o workflow valida).\n"
+            "1. **Edite `ALUNO.md`** com seu nome/RA — pela própria interface "
+            "web, não precisa clonar nada ainda (o workflow valida).\n"
             "2. **Abra a [issue 🎯 Prova]("+url+")** — é nela que tudo "
             "acontece.\n"
             "3. **Selecione sua prova** comentando `/track <nome>` na issue "
-            "(a lista está no comentário de boas-vindas).\n"
-            "4. A prova é aplicada no repo (overlay); desenvolva e dê push. "
-            "**Pushes não disparam correção** — quando quiser feedback, rode "
-            "`/auto-correcao` na issue.\n"
+            "(a lista está no comentário de boas-vindas). A prova é aplicada "
+            "automaticamente em seguida.\n"
+            "4. **Clone (ou faça pull do) repo só agora**, depois do "
+            "comentário “✅ Prova aplicada” na issue — os seus parâmetros de "
+            "variante já estão em `variante/params.json`. Desenvolva e dê "
+            "push. **Pushes não disparam correção** — quando quiser "
+            "feedback, rode `/auto-correcao` na issue.\n"
             "5. **Feche a issue para encerrar** — o sistema só aceita o "
             "fechamento depois de ao menos 1 `/auto-correcao` e gera o "
             "`teacher.json` de entrega.\n")
@@ -105,7 +109,12 @@ def comentario_boas_vindas(numero_issue, candidatas):
                           "o sistema)" % nome)
         else:
             linhas.append("- `%s`" % nome)
-    linhas += ["", "Selecione comentando `/track <nome>` nesta issue.",
+    linhas += ["", "Selecione comentando `/track <nome>` nesta issue — a "
+                    "aplicação é automática e os seus parâmetros da variante "
+                    "chegam em `variante/params.json` (não precisa gerar "
+                    "nada). Dica de ordem: até a prova ser aplicada, dá para "
+                    "fazer tudo por aqui na interface web — **clone o repo "
+                    "só depois** do comentário “✅ Prova aplicada”.",
                "",
                "Comandos: comente `/ajuda` aqui para ver todos. Lembre: rode "
                "`/auto-correcao` ao menos 1x antes de fechar a issue — o "
@@ -168,7 +177,8 @@ def main():
 
 - [ ] Meu `ALUNO.md` esta com **Nome e RA** corretos (o bot preencheu o nome pela sua conta GitHub — confira!)
 - [ ] Li as [regras comuns](https://github.com/REPO_FULL_PLACEHOLDER/blob/main/docs/REGRAS.md) e sei o que precisa declarar em `FONTES.md`
-- [ ] Sei que a pasta da prova ainda nao foi publicada — quando o professor publicar, o bot puxa a pasta escolhida (`exams/<ano>/<track>/`, ou a prova-teste `dummy-exam`) e ela **vira meu repositorio** (README, contrato e testes novos); o relogio da janela comeca no commit de aplicacao
+- [ ] Sei que a prova so "vale" depois do **commit de aplicacao** no meu repo — ate la faco tudo por esta interface web (**sem clonar**; clone ou pull so depois do comentario "✅ Prova aplicada" nesta issue)
+- [ ] Sei que a pasta escolhida (`exams/<ano>/<track>/`, ou a prova-teste `dummy-exam`) **vira meu repositorio** na aplicacao — README, contrato e testes novos pousam na **raiz** e a arvore antiga de `exams/` é removida (trabalhe na raiz, nunca dentro de `exams/`) — e que os parametros da minha variante chegam prontos em `variante/params.json`, eu so leio o arquivo, nunca preciso gerar nada
 - [ ] Confirmo que vou entregar com commits **dentro da janela** contada a partir desse commit de aplicacao
 
 ## Selecao da track (obrigatoria)

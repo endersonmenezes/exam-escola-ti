@@ -8,7 +8,9 @@ name: Aplicar prova (pasta do ano publicada no template)
 #    dispara workflow (GITHUB_TOKEN nao dispara workflows — anti-recursao),
 #    por isso o comentario /track abaixo e o disparo real da aplicacao.
 #  - issue_comment: "/track <nome>" (selecao — aplica na hora, sem esperar o
-#    commit do bot) ou "aplicar" (forcar manual).
+#    commit do bot). "/aplicar" ainda dispara por compatibilidade, mas o
+#    comando esta DESCONTINUADO (o /track ja aplica sozinho; o Preparar
+#    entrega responde na issue com o aviso).
 #  - workflow_dispatch: gatilho manual.
 
 on:
@@ -38,9 +40,11 @@ jobs:
   aplicar:
     name: Descobrir pasta do ano, aplicar e comentar na issue
     # no-op no repositorio-template; em issue_comment: sobe para "/track <nome>"
-    # (o proprio script valida o nome), "/aplicar" ou "aplicar" solto. Comentarios
-    # "/auto-correcao" e demais NAO disparam a aplicacao.
-    if: github.repository != 'endersonmenezes/exam-escola-ti' && (github.event_name != 'issue_comment' || contains(github.event.comment.body, '/track ') || contains(github.event.comment.body, '/aplicar') || contains(github.event.comment.body, 'aplicar'))
+    # (o proprio script valida o nome) ou "/aplicar" (descontinuado — roda
+    # idempotente por compatibilidade). Comentarios "/auto-correcao" e demais
+    # NAO disparam a aplicacao. ATENCAO: nao usar contains(body, 'aplicar')
+    # solto — qualquer frase com a palavra dispararia o workflow.
+    if: github.repository != 'endersonmenezes/exam-escola-ti' && (github.event_name != 'issue_comment' || contains(github.event.comment.body, '/track ') || contains(github.event.comment.body, '/aplicar'))
     runs-on: ubuntu-slim
     steps:
       - uses: actions/checkout@v7

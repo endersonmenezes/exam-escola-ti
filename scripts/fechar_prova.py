@@ -168,6 +168,13 @@ def main():
         except ValueError:
             pass
 
+    # ---- ponto de entrada da spec (SDD) — campo opcional no schema 1 ----
+    entrada = None
+    entrada_path = os.path.join(BASE, ".prova", "entrada")
+    if os.path.exists(entrada_path):
+        entrada = (open(entrada_path, encoding="utf-8", errors="replace")
+                   .read().strip() or None)
+
     # ---- janela + commits (bot nao conta) ----
     minutos = 120
     rubrica_path = os.path.join(BASE, "rubrica.json")
@@ -184,15 +191,28 @@ def main():
     ultimo_push = datas[0] if datas else None
     primeiro = datas[-1] if datas else None
     autores = sorted({l.split("|")[0] for l in commits_aluno if "|" in l})
-    fora = 0
+    fora = pre_aplicacao = pre_t0_pos_setup = 0
+    # v3.8: o marco da "fase de preparacao" e o SETUP do repo (bot), nao o
+    # commit de aplicacao — na turma 2026 os alunos comecavam a prova no
+    # inicio da aula e o /track+aplicacao acontecia minutos depois; commits
+    # entre o setup e o t0 sao trabalho valido, nao "preparacao". Sem commit
+    # de setup (repo legado/clonado na mao), cai no comportamento antigo
+    # (tudo antes do t0 conta como pre_aplicacao).
+    ts = sh("git", "log", "--format=%ad", "--date=iso-strict",
+            "--grep=setup inicial da prova", "--author=github-actions",
+            "-1").strip()
     if t0:
         try:
             t0dt = datetime.fromisoformat(t0)
             fim = t0dt + timedelta(minutes=minutos)
-            fora = sum(1 for d in datas
-                       if datetime.fromisoformat(d) > fim)
-            # commits ANTES do t0 sao fase de preparacao (setup, RA, FONTES)
-            # — nao sao "fora da janela"; o trampas os reporta como informativo
+            dts = [datetime.fromisoformat(d) for d in datas]
+            fora = sum(1 for d in dts if d > fim)
+            if ts:
+                tsdt = datetime.fromisoformat(ts)
+                pre_aplicacao = sum(1 for d in dts if d < tsdt)
+                pre_t0_pos_setup = sum(1 for d in dts if tsdt <= d <= t0dt)
+            else:
+                pre_aplicacao = sum(1 for d in dts if d < t0dt)
         except ValueError:
             fora = 0
 
@@ -243,10 +263,13 @@ def main():
         "motivo": motivo,
         "aluno": {"login": OWNER or None, "ra": ra, "nome": nome},
         "variante": variante_d,
+        "entrada": entrada,
         "janela": {"minutos": minutos, "t0": t0 or None, "ultimo_push": ultimo_push},
         "commits": {"total": len(commits_aluno), "autores": autores,
                     "primeiro": primeiro, "ultimo": ultimo_push,
-                    "fora_da_janela": fora},
+                    "fora_da_janela": fora,
+                    "pre_aplicacao": pre_aplicacao,
+                    "pre_t0_pos_setup": pre_t0_pos_setup},
         "nota_parcial": {"valor": valor, "criterios": criterios},
         "auto_correcao": auto_correcao,
         "fontes": fontes_d,
