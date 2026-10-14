@@ -191,6 +191,22 @@ def main():
     if os.path.isdir(origem):
         shutil.rmtree(origem)
 
+    # 4b) LIMPEZA pos-overlay: o repo gerado a partir do template carrega a
+    #     arvore exams/ INTEIRA (a pasta do ano e o dummy ficam publicados na
+    #     main do template antes da geracao do repo). Pos-overlay o conteudo
+    #     da pasta aplicada ja virou a RAIZ; o restante de exams/ e so lixo
+    #     e armadilha — caso real da turma 2026: um aluno fez a prova inteira
+    #     dentro de exams/2026/track-03-crud/... porque a pasta estava na
+    #     frente dele. Seguro remover: nada que o CI/correcao leem mora em
+    #     exams/ (contrato/rubrica/track.json na raiz, suites em tests/public
+    #     e scripts/), o validar-exams so roda no template e o tamper T3
+    #     protege scripts//.github//docs/ (exams/ nunca entra). Idempotente:
+    #     re-runs e o polling encontram exams/ ja ausente.
+    exams_dir = os.path.join(BASE, "exams")
+    if os.path.isdir(exams_dir):
+        shutil.rmtree(exams_dir)
+    git("rm", "-r", "--quiet", "--cached", "exams", "--ignore-unmatch")
+
     with open(sentinela, "w", encoding="utf-8") as f:
         f.write(pasta + "\n")
     with open(os.path.join(BASE, ".prova", "exam-dir"), "w", encoding="utf-8") as f:
@@ -249,7 +265,10 @@ def main():
             else "- `%s` = %s" % (k, val)
             for k, val in v_arquivo.items() if k != "slug")
         corpo = ("## ✅ Prova aplicada neste repositorio\n\n"
-                 "Pasta: `%s` — a janela da prova é de **%d minutos**, "
+                 "Pasta aplicada por overlay: `%s` — o conteúdo dela **é a "
+                 "raiz do seu repo agora** (a árvore antiga de `exams/` foi "
+                 "removida neste commit; trabalhe na raiz, não em `exams/`). "
+                 "A janela da prova é de **%d minutos**, "
                  "contados a partir do commit de aplicacao. O relogio ja esta "
                  "rodando.\n\n"
                  "**Sua variante** — cópia fiel de `variante/params.json`, "

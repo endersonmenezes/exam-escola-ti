@@ -178,7 +178,7 @@ def main():
 - [ ] Meu `ALUNO.md` esta com **Nome e RA** corretos (o bot preencheu o nome pela sua conta GitHub — confira!)
 - [ ] Li as [regras comuns](https://github.com/REPO_FULL_PLACEHOLDER/blob/main/docs/REGRAS.md) e sei o que precisa declarar em `FONTES.md`
 - [ ] Sei que a prova so "vale" depois do **commit de aplicacao** no meu repo — ate la faco tudo por esta interface web (**sem clonar**; clone ou pull so depois do comentario "✅ Prova aplicada" nesta issue)
-- [ ] Sei que a pasta escolhida (`exams/<ano>/<track>/`, ou a prova-teste `dummy-exam`) **vira meu repositorio** na aplicacao (README, contrato e testes novos) e que os parametros da minha variante chegam prontos em `variante/params.json` — eu so leio o arquivo, nunca preciso gerar nada
+- [ ] Sei que a pasta escolhida (`exams/<ano>/<track>/`, ou a prova-teste `dummy-exam`) **vira meu repositorio** na aplicacao — README, contrato e testes novos pousam na **raiz** e a arvore antiga de `exams/` é removida (trabalhe na raiz, nunca dentro de `exams/`) — e que os parametros da minha variante chegam prontos em `variante/params.json`, eu so leio o arquivo, nunca preciso gerar nada
 - [ ] Confirmo que vou entregar com commits **dentro da janela** contada a partir desse commit de aplicacao
 
 ## Selecao da track (obrigatoria)
