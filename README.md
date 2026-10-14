@@ -96,7 +96,10 @@ issue, ele reabre com aviso em vez de gerar o `teacher.json`.
   duas vezes.
 - **Variante por repositório**: `scripts/variante.py` deriva os parâmetros do
   nome do repo + tabelas do `contrato.json` da pasta do ano; a correção
-  recompute os mesmos valores.
+  recompute os mesmos valores. Para o aluno isso é transparente: os valores
+  chegam prontos em `variante/params.json` (commit de aplicação — **fonte
+  única**, espelhada no comentário da issue) e os enunciados só o apontam
+  para **ler** o arquivo — nunca para gerar ou preencher algo.
 
 ## Configuração (uma vez)
 
@@ -158,7 +161,7 @@ nunca é aplicado por engano no dia de uma prova real.
 **Teste A — professor/dono do template (você está em `endersonmenezes/`):**
 1. Crie um repo de teste: `gh repo create prova-teste-meu-login --template endersonmenezes/exam-escola-ti --private` (ou o botão "Use this template"). O setup roda sozinho no push de criação: identidade, `ALUNO.md` e `README.md` com o botão "🎯 Iniciar a prova", e a **issue única "🎯 Prova"** (lock `.prova/issue`).
 2. Complete o RA em `ALUNO.md` e marque os checkboxes na issue — *Preparar entrega* valida e responde na issue.
-3. Comente `/track dummy-exam` na issue: o sistema valida, responde na hora e **aplica a prova-teste automaticamente** (overlay — `contrato.json` na raiz, README novo, `tests/public/` —, commit do bot = t0 da janela, comentário com a sua variante). Comentar "aplicar" na issue também força, se quiser antecipar.
+3. Comente `/track dummy-exam` na issue: o sistema valida, responde na hora e **aplica a prova-teste automaticamente** (overlay — `contrato.json` na raiz, README novo, `tests/public/` —, commit do bot = t0 da janela, comentário com a sua variante, copia de `variante/params.json`). Clone (ou puxe) o repo **depois** desse commit — a prova só existe a partir dele.
 4. Implemente algo em `src/` + `Containerfile` e dê push — **pushes não disparam
    correção**; quando quiser feedback, comente `/auto-correcao` na issue: a
    *Auto-correção* roda na hora (trampas + testes públicos) e a nota sai no

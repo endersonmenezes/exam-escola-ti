@@ -8,6 +8,57 @@ Todas as mudanças notáveis do sistema de provas da Escola de TI
 > em prova real. As turmas que exercitaram o sistema até aqui usaram-no como
 > aula teste (prova dummy "Hello World").
 
+## [Unreleased]
+
+Mudanças pós-aplicação da Prova 01/2026 (feedback do docente com ~68 alunos):
+unificação da fonte da variante e simplificação do fluxo de aplicação. Vale
+para a próxima aplicação — a prova de 07/10/2026 não é afetada.
+
+### Corrigido
+
+- **Duas fontes de variante — `variante/params.json` é a fonte única**: os
+  enunciados das tracks 01 e 02 pedia para o aluno RODAR
+  `python scripts/variante.py` (antes da aplicação isso gerava um
+  `params.json` com os parâmetros da **track errada**, por causa do fallback
+  de descoberta da pasta do ano) e os READMEs apontavam para "o comentário da
+  issue" como lista de valores. Agora todo enunciado/README (tracks 01/02/03
+  e dummy) aponta para **ler** `variante/params.json` — gerado no commit de
+  aplicação, nunca pelo aluno — e o comentário de aplicação na issue declara
+  ser só uma cópia dele;
+- **Comentário de aplicação gerado a partir do arquivo**: `aplicar_prova.py`
+  relê o `variante/params.json` gravado (em vez de reformatar o dict em
+  memória) e usa as descrições de `variante.uso` do contrato da track — o
+  texto genérico do dummy ("nome que a suíte envia em `/saudar`") não vaza
+  mais para tracks onde o parâmetro significa outra coisa;
+- **"❌ rode `python scripts/variante.py`" antes da aplicação**: em ~30% dos
+  repos analisados da turma 2026 o upsert de preparação ficou travado nessa
+  mensagem — o fallback de `pasta_do_ano()` encontra `exams/<ano>` herdada da
+  geração do repo e validava a variante antes da prova existir (um aluno
+  digitou o comando como comentário na issue). `preparar_entrega.py` só
+  valida a variante quando a aplicação de fato aconteceu (marcador
+  `.prova/exam-dir`/`contrato.json` na raiz); antes dela, mensagem ⏳ sem
+  ação pedida. Mensagens de divergência/ausência pós-aplicação também deixam
+  de pedir script no escopo errado;
+- **Comandos digitados errado silenciados**: o gatilho da auto-correção agora
+  tolera os formatos reais digitados pelos alunos — `/auto-correção`,
+  `/autocorrecao` e `/auto correcao` (antes: silêncio total, sem correção);
+- **Gatilho falso do aplicar-prova**: o `if` do workflow aceitava qualquer
+  comentário contendo a palavra "aplicar" (ex.: "quando vai ser aplicada?") —
+  agora só dispara para `/track <nome>` ou `/aplicar`.
+
+### Alterado
+
+- **`/aplicar` descontinuado**: o comando deixou de existir no `/ajuda`, nos
+  docs e no checklist — a aplicação já é consequência direta do `/track`.
+  Quem comentar `/aplicar` recebe um aviso de descontinuação (upsert
+  `<!-- aplicar-deprecado -->`) e o gatilho do workflow foi mantido só por
+  compatibilidade (idempotente);
+- **Ordem do processo explicitada (web-first)**: checklist da issue, README de
+  primeiros passos e boas-vindas agora instruem o aluno a fazer tudo pela
+  interface web até o comentário "✅ Prova aplicada" e **clonar/fazer pull só
+  depois** — commits locais antes da aplicação só geravam ruído
+  ("N commit(s) antes da aplicação") e tamper falsos.
+
 ## [1.3.0] — 2026-10-07
 
 Track 03 (CRUD): a persistência agora aceita **os dois caminhos** — `/data`
