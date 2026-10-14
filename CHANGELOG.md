@@ -11,10 +11,37 @@ Todas as mudanças notáveis do sistema de provas da Escola de TI
 ## [Unreleased]
 
 Mudanças pós-aplicação da Prova 01/2026 (feedback do docente com ~68 alunos):
-unificação da fonte da variante e simplificação do fluxo de aplicação. Vale
-para a próxima aplicação — a prova de 07/10/2026 não é afetada.
+unificação da fonte da variante, simplificação do fluxo de aplicação,
+limpeza do repo do aluno, ponto de entrada da spec SDD e fim do falso
+positivo de "commits antes da aplicação". Vale para a próxima aplicação — a
+prova de 07/10/2026 não é afetada.
 
 ### Corrigido
+
+- **Repo do aluno ia para a prova carregando a árvore `exams/` inteira** (a
+  pasta do ano fica publicada no template antes da geração dos repos). O
+  overlay copiava a pasta escolhida para a raiz, mas o restante de `exams/`
+  ficava no repo — caso real: um aluno fez a prova inteira dentro de
+  `exams/2026/track-03-crud/...`. O *Aplicar prova* agora **remove `exams/`
+  no commit de aplicação** (idempotente; nada que o CI/correcao leem mora
+  lá; validar-exams só roda no template; tamper T3 protege
+  `scripts/`/`.github/`/`docs/`, não `exams/`);
+- **Falso positivo "N commit(s) ANTES da aplicacao (fase de preparacao)"**
+  (aparecia em quase toda issue): o marco era o commit de aplicação (t0), mas
+  os alunos começam a prova no início da aula e o `/track`+aplicação chega
+  minutos depois — commits válidos da janela eram rotulados "preparação".
+  Agora o marco é o **commit de setup** do repo: antes dele = preparação;
+  entre setup e t0 = mensagem neutra ("inicio de aula; trabalho valido");
+  a trampa real (`fora_da_janela`, depois do fim) não muda. Sem commit de
+  setup (repo legado), comportamento antigo. `teacher.json` ganha
+  `commits.pre_aplicacao` (pré-setup) e `commits.pre_t0_pos_setup` (opcionais);
+- **Critério E não lia specs em `docs/`** (caso real da turma 2026): o
+  enunciado da track-01 sugeria os arquivos de spec sem dizer a pasta, um
+  aluno entregou tudo em `docs/` (pasta natural para `.md`) e o `check_md.py`
+  pontuou 0/15 sem ler os arquivos — o prefixo `docs/` inteiro era excluído.
+  Agora a exclusão é por caminho exato (`docs/REGRAS.md`, `docs/TRACKS.md`),
+  specs em `docs/` pontuam normalmente, e o enunciado/README da track-01 diz
+  explicitamente onde os `.md` vão (raiz, com `docs/` tolerado).
 
 - **Duas fontes de variante — `variante/params.json` é a fonte única**: os
   enunciados das tracks 01 e 02 pedia para o aluno RODAR
@@ -44,17 +71,18 @@ para a próxima aplicação — a prova de 07/10/2026 não é afetada.
   `/autocorrecao` e `/auto correcao` (antes: silêncio total, sem correção);
 - **Gatilho falso do aplicar-prova**: o `if` do workflow aceitava qualquer
   comentário contendo a palavra "aplicar" (ex.: "quando vai ser aplicada?") —
-  agora só dispara para `/track <nome>` ou `/aplicar`;
-- **Critério E não lia specs em `docs/`** (caso real da turma 2026): o
-  enunciado da track-01 sugeria os arquivos de spec sem dizer a pasta, um
-  aluno entregou tudo em `docs/` (pasta natural para `.md`) e o `check_md.py`
-  pontuou 0/15 sem ler os arquivos — o prefixo `docs/` inteiro era excluído.
-  Agora a exclusão é por caminho exato (`docs/REGRAS.md`, `docs/TRACKS.md`),
-  specs em `docs/` pontuam normalmente, e o enunciado/README da track-01 diz
-  explicitamente onde os `.md` vão (raiz, com `docs/` tolerado).
+  agora só dispara para `/track <nome>` ou `/aplicar`.
 
 ### Alterado
 
+- **Ponto de entrada da spec (SDD)**: a correção por modelo fixo precisa saber
+  por onde começar a ler os `.md` (na turma 2026 as specs apareceram em ~12
+  pastas diferentes). Track-01 passa a exigir `.prova/entrada` — arquivo com
+  o caminho relativo do arquivo inicial (recomenda-se um README índice com
+  links); o *Preparar entrega* valida existência/caminho na issue (exigência
+  declarada por `suites.md.entrada` no `track.json` da track, para as
+  próximas tracks reutilizarem) e o `teacher.json` ganha o campo opcional
+  `entrada` com o caminho declarado;
 - **`/aplicar` descontinuado**: o comando deixou de existir no `/ajuda`, nos
   docs e no checklist — a aplicação já é consequência direta do `/track`.
   Quem comentar `/aplicar` recebe um aviso de descontinuação (upsert
