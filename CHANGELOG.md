@@ -8,7 +8,7 @@ Todas as mudanças notáveis do sistema de provas da Escola de TI
 > em prova real. As turmas que exercitaram o sistema até aqui usaram-no como
 > aula teste (prova dummy "Hello World").
 
-## [Unreleased]
+## [1.4.0] — 2026-10-14
 
 Mudanças pós-aplicação da Prova 01/2026 (feedback do docente com ~68 alunos):
 unificação da fonte da variante, simplificação do fluxo de aplicação,
