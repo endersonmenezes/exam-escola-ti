@@ -39,8 +39,8 @@ repositório, então copiar de colega não funciona.
 ## Parâmetros da sua variante
 
 Cada repositório tem a sua — derivados do **nome do repo**, então copiar de
-colega não funciona. O comentário de aplicação na issue "🎯 Prova" lista os
-seus valores; no `variante/params.json` eles aparecem assim:
+colega não funciona. A **fonte única** é o arquivo `variante/params.json`
+(gerado na aplicação) — os valores aparecem assim:
 
 | Parâmetro | O que a suíte faz com ele |
 | --- | --- |

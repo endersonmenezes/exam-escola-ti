@@ -16,8 +16,11 @@ back-office não existe — **somente a API** é objeto desta prova.
 
 ## Seus parâmetros (variante)
 
-Rode `python scripts/variante.py`. Os valores abaixo **mudam de aluno para
-aluno** e são obrigatórios no comportamento especificado:
+Os seus valores estão prontos em **`variante/params.json`** (gerado na
+aplicação da prova, no commit do bot). Os parâmetros abaixo **mudam de aluno
+para aluno** e são obrigatórios no comportamento especificado — **você só lê
+o arquivo, não precisa gerar nem preencher nada** (o comentário de aplicação
+na issue "🎯 Prova" é só uma cópia dele):
 
 | Parâmetro | Significado |
 | --- | --- |

@@ -7,8 +7,12 @@ ponta a ponta.
 
 ## Seus alvos (variante)
 
-Rode `python scripts/variante.py`. Os valores abaixo **mudam de aluno para aluno** (exceto a origem,
-fixa em `http://localhost:3000`) — a correção valida exatamente estes:
+Os seus valores estão prontos em **`variante/params.json`** (gerado na
+aplicação da prova, no commit do bot). Os alvos abaixo **mudam de aluno para
+aluno** (exceto a origem, fixa em `http://localhost:3000`) — a correção
+valida exatamente estes. **Você só lê o arquivo, não precisa gerar nem
+preencher nada** (o comentário de aplicação na issue "🎯 Prova" é só uma
+cópia dele):
 
 | Parâmetro | Alvo correto |
 | --- | --- |

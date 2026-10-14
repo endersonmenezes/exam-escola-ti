@@ -5,8 +5,10 @@ Valida a preparacao (ALUNO.md com RA, identidade, FONTES.md editado, variante)
 e — se a prova ja foi aplicada — a variante, e responde NA PROPRIA ISSUE
 (comentario; NAO fecha: o fechamento encerra a prova — ver fechar_prova.py).
 
-ROTEAMENTO (v3.5): responde APENAS para (a) evento `issues: edited`,
-(b) comentario que case `/track <nome>` (selecao) ou (c) `/ajuda`/`--help`.
+ROTEAMENTO (v3.5, v3.7): responde APENAS para (a) evento `issues: edited`,
+(b) comentario que case `/track <nome>` (selecao), (c) `/ajuda`/`--help` ou
+(d) `/aplicar` (apenas o aviso de descontinuacao — o comando morreu:
+a aplicacao e consequencia direta do `/track`).
 Qualquer OUTRO comentario (`/auto-correcao`, conversa do aluno) e SILENCIO
 TOTAL — o bug do roteamento respondia a qualquer comentario repetindo a
 selecao do `.prova/track` atual.
@@ -53,16 +55,24 @@ TEMPLATE_URL = os.environ.get(
 
 AJUDA = (
     "**Comandos disponíveis** (comente nesta issue):\n"
-    "- `/track <nome>` — seleciona a prova (ex.: `/track dummy-exam`)\n"
-    "- `/aplicar` — força a aplicação da prova selecionada\n"
+    "- `/track <nome>` — seleciona a prova (ex.: `/track dummy-exam`) e já "
+    "**aplica automaticamente** no seu repo\n"
     "- `/auto-correcao` — roda a correção completa (trampas + testes "
     "públicos + nota). **Obrigatório ao menos 1x antes de fechar a issue.**\n"
     "- `/ajuda` ou `--help` — mostra esta lista\n"
     "\n"
     "**Ciclo:** preencha `ALUNO.md` → `/track` → desenvolva (commits "
     "pequenos!) → `/auto-correcao` → feche a issue (gera `teacher.json`).\n"
-    "Dica: pushes não disparam correção — rode o comando quando quiser "
-    "feedback.")
+    "Dicas: pushes não disparam correção — rode o comando quando quiser "
+    "feedback. Os parâmetros da sua variante ficam em `variante/params.json` "
+    "(gerado na aplicação — você só lê o arquivo, nunca precisa gerá-lo).")
+
+AVISO_APLICAR = (
+    "⚠️ O comando `/aplicar` foi **descontinuado** — não é mais necessário: "
+    "a prova é aplicada automaticamente no momento em que você comenta "
+    "`/track <nome>`. Se o comentário “✅ Prova aplicada” já chegou nesta "
+    "issue, não há nada a fazer: os seus parâmetros estão em "
+    "`variante/params.json` (fonte única).")
 
 
 def api(method, path, payload=None):
@@ -177,15 +187,18 @@ def main():
 
     identidade, prova = [], []
 
-    # ROTEAMENTO (v3.5): em issue_comment, so responde a /track <nome> ou
-    # /ajuda|--help — outros comentarios (/auto-correcao, conversa) sao
-    # SILENCIO TOTAL (a auto-correcao responde pela propria run; o bug era
-    # responder a qualquer comentario repetindo a selecao do .prova/track).
+    # ROTEAMENTO (v3.5): em issue_comment, so responde a /track <nome>,
+    # /ajuda|--help ou /aplicar (este último só para avisar da descontinuação)
+    # — outros comentarios (/auto-correcao, conversa) sao SILENCIO TOTAL (a
+    # auto-correcao responde pela propria run; o bug era responder a qualquer
+    # comentario repetindo a selecao do .prova/track).
     corpo = CORPO_COMENTARIO.strip()
+    eh_aplicar = False
     if corpo:
         m_track = re.match(r"(?i)^\s*/track\s+\S+", corpo)
         eh_ajuda = "/ajuda" in corpo.lower() or "--help" in corpo.lower()
-        if not m_track and not eh_ajuda:
+        eh_aplicar = bool(re.match(r"(?i)^\s*/aplicar\b", corpo))
+        if not m_track and not eh_ajuda and not eh_aplicar:
             print("Comentario sem comando atendido pelo preparar — silencio total.")
             return
 
@@ -199,6 +212,10 @@ def main():
         prova_issue.comentar(AJUDA)
         print("Resposta de /ajuda postada na issue #%s." % lock)
         return
+
+    if eh_aplicar:
+        prova_issue.atualizar_comentario("aplicar-deprecado", AVISO_APLICAR)
+        print("Aviso de descontinuacao do /aplicar postado na issue #%s." % lock)
 
     # 1) ALUNO.md com RA — Fase 1 (Identidade)
     aluno_path = os.path.join(BASE, "ALUNO.md")
@@ -221,20 +238,31 @@ def main():
     # 3) FONTES.md presente E editado em relacao ao template — Fase 2
     prova.append(checar_fontes())
 
-    # 4) variante (só depois da aplicação) — Fase 2
-    pasta = pasta_do_ano(BASE)
-    if pasta:
+    # 4) variante — Fase 2. v3.7: valida SOMENTE quando a aplicacao de fato
+    #    aconteceu (marcador .prova/exam-dir ou contrato.json na raiz — ambos
+    #    entram no commit de aplicacao). Antes dela, o fallback de
+    #    pasta_do_ano() encontra exams/<ano> herdada da GERACAO do repo (o
+    #    template publicado) e o ❌ antigo ("rode scripts/variante.py") ficava
+    #    visivel para o aluno — caso real recorrente na turma de 2026.
+    aplicada = (os.path.exists(os.path.join(BASE, ".prova", "exam-dir"))
+                or os.path.exists(os.path.join(BASE, "contrato.json")))
+    if not aplicada:
+        prova.append("⏳ prova ainda não aplicada — sua variante será gerada em "
+                     "`variante/params.json` no commit de aplicação (nada a "
+                     "fazer agora)")
+    else:
+        pasta = pasta_do_ano(BASE)
         esperado = variante(REPO)
         params_path = os.path.join(BASE, "variante", "params.json")
         if os.path.exists(params_path):
             gravado = json.load(open(params_path, encoding="utf-8"))
             diffs = [k for k in esperado if gravado.get(k) != esperado[k]]
-            prova.append("✅ variante coerente (pasta `%s`)" % pasta if not diffs
-                         else "❌ `variante/params.json` diverge em: %s" % ", ".join(diffs))
+            prova.append("✅ variante coerente com `variante/params.json` (pasta `%s`)" % pasta if not diffs
+                         else "❌ `variante/params.json` diverge em: %s — restaure o arquivo do commit de aplicação." % ", ".join(diffs))
         else:
-            prova.append("❌ `variante/params.json` ausente — rode `python scripts/variante.py`.")
-    else:
-        prova.append("⏳ prova ainda não aplicada — a variante será validada na aplicação")
+            prova.append("❌ `variante/params.json` ausente (ele é gerado no commit "
+                         "de aplicação) — se você o apagou, rode `python "
+                         "scripts/variante.py` localmente e commite o resultado.")
 
     todas = identidade + prova
     faltam = [l for l in todas if l.startswith("❌")]

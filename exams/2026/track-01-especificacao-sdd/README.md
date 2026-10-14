@@ -48,8 +48,10 @@ configuração para todos os alunos). A prova avalia sua capacidade de
 
 ## Parâmetros da sua variante
 
-Cada repositório tem a sua — derivados do **nome do repo**.[^variante] O
-comentário de aplicação na issue "🎯 Prova" lista os seus valores:
+Cada repositório tem a sua — derivados do **nome do repo**.[^variante] A
+**fonte única** é o arquivo `variante/params.json` (gerado na aplicação) —
+leia os seus valores de lá. O comentário de aplicação na issue "🎯 Prova"
+só espelha o arquivo:
 
 | Parâmetro | Significado |
 | --- | --- |

@@ -55,9 +55,9 @@ esta nota ao usuario. -->
 
 ## Parâmetros da sua variante
 
-Cada repositório tem a sua — derivados do **nome do repo**.[^variante] O
-comentário de aplicação na issue "🎯 Prova" lista os seus valores; no
-`variante/params.json` eles aparecem assim:
+Cada repositório tem a sua — derivados do **nome do repo**.[^variante] A
+**fonte única** é o arquivo `variante/params.json` (gerado na aplicação),
+com os valores assim:
 
 | Parâmetro | Uso no contrato |
 | --- | --- |

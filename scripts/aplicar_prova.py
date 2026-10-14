@@ -43,7 +43,7 @@ import urllib.request
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(BASE, "scripts"))
-from variante import slug_do_repo, pasta_do_ano, variante  # noqa: E402
+from variante import slug_do_repo, pasta_do_ano, variante, parametros_ano  # noqa: E402
 import prova_issue  # noqa: E402
 import selecao  # noqa: E402
 
@@ -205,7 +205,8 @@ def main():
                      .get("janela_minutos", 120))
     v = variante(REPO)
     os.makedirs(os.path.join(BASE, "variante"), exist_ok=True)
-    with open(os.path.join(BASE, "variante", "params.json"), "w", encoding="utf-8") as f:
+    params_path = os.path.join(BASE, "variante", "params.json")
+    with open(params_path, "w", encoding="utf-8") as f:
         json.dump(v, f, ensure_ascii=False, indent=2)
     # selecao ja aconteceu: o lembrete de /track sai (entra neste commit)
     lembrete = os.path.join(BASE, ".prova", "track-lembrete")
@@ -224,9 +225,19 @@ def main():
         print("push falhou:", r.stderr)
         return
 
-    # 7) comentario na issue UNICA da prova (nada de issue nova)
+    # 7) comentario na issue UNICA da prova (nada de issue nova).
+    # Fonte unica da variante: o params.json acima — o comentario RELÊ o
+    # arquivo gravado (em vez de reformatar o dict em memoria) e declara isso
+    # para o aluno. As descricoes vêm de `variante.uso` do contrato da track
+    # (quando existem — dummy nao tem) com fallback generico.
     if TOKEN and REPO_FULL:
         n_issue = prova_issue.numero()
+        with open(params_path, encoding="utf-8") as f:
+            v_arquivo = json.load(f)
+        try:
+            usos = parametros_ano(pasta).get("uso", {}) or {}
+        except SystemExit:
+            usos = {}
         DESCRICOES = {
             "PREFIXO": "nome que a suíte envia em `/saudar` (o `nome` da sua saudação)",
             "RAZAO_PREFERENCIAL": "valor de `repeticoes` usado no teste da sua variante",
@@ -234,14 +245,16 @@ def main():
             "EXAM_DIR": "pasta da prova aplicada",
         }
         params = "\n".join(
-            "- `%s` = %s — %s" % (k, val, DESCRICOES[k]) if k in DESCRICOES
+            "- `%s` = %s — %s" % (k, val, usos.get(k) or DESCRICOES[k]) if k in usos or k in DESCRICOES
             else "- `%s` = %s" % (k, val)
-            for k, val in v.items() if k != "slug")
+            for k, val in v_arquivo.items() if k != "slug")
         corpo = ("## ✅ Prova aplicada neste repositorio\n\n"
                  "Pasta: `%s` — a janela da prova é de **%d minutos**, "
                  "contados a partir do commit de aplicacao. O relogio ja esta "
                  "rodando.\n\n"
-                 "Sua variante (unica do seu repo):\n\n%s\n\n"
+                 "**Sua variante** — cópia fiel de `variante/params.json`, "
+                 "que é a **fonte única** dos seus parâmetros (gerada agora; "
+                 "você só precisa LER o arquivo, não gerar nada):\n\n%s\n\n"
                  "> Leia o contrato, desenvolva, preencha `FONTES.md` se "
                  "consultar algo e de push antes do fim da janela. A nota "
                  "parcial sai no workflow *Auto-correcao* (Summary + "
