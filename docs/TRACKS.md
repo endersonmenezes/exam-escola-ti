@@ -82,7 +82,12 @@ estilos de prova) sem disparar o que não serve para a track atual.
 > Containerfile) liga `md` e desliga `estrutura`/`testes-publicos`; o job `md`
 > roda `scripts/check_md.py` com a config de `suites.md` do lockfile:
 > `{"pontos": 15, "pts_por_arquivo": 3, "max_linhas_bloco": 20}` (bloco de
-> código maior que o limite = fatal, nota 0 via job de nota).
+> código maior que o limite = fatal, nota 0 via job de nota). O checker lê
+> `.md` da raiz **e de `docs/`** (o matching é por nome de arquivo; os docs do
+> esqueleto `docs/REGRAS.md`/`docs/TRACKS.md` são excluídos por caminho
+> exato) — e o enunciado da track deve dizer **explicitamente** onde o `.md`
+> vai (caso real 2026: specs em `docs/` zeraram o critério E porque o prefixo
+> `docs/` inteiro era excluído).
 
 > Uma track de **debugging** (app quebrada em containers, ciclo
 > build→logs→corrigir) desliga `estrutura`/`testes-publicos`/`md` e liga os

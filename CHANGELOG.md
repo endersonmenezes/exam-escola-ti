@@ -44,7 +44,14 @@ para a próxima aplicação — a prova de 07/10/2026 não é afetada.
   `/autocorrecao` e `/auto correcao` (antes: silêncio total, sem correção);
 - **Gatilho falso do aplicar-prova**: o `if` do workflow aceitava qualquer
   comentário contendo a palavra "aplicar" (ex.: "quando vai ser aplicada?") —
-  agora só dispara para `/track <nome>` ou `/aplicar`.
+  agora só dispara para `/track <nome>` ou `/aplicar`;
+- **Critério E não lia specs em `docs/`** (caso real da turma 2026): o
+  enunciado da track-01 sugeria os arquivos de spec sem dizer a pasta, um
+  aluno entregou tudo em `docs/` (pasta natural para `.md`) e o `check_md.py`
+  pontuou 0/15 sem ler os arquivos — o prefixo `docs/` inteiro era excluído.
+  Agora a exclusão é por caminho exato (`docs/REGRAS.md`, `docs/TRACKS.md`),
+  specs em `docs/` pontuam normalmente, e o enunciado/README da track-01 diz
+  explicitamente onde os `.md` vão (raiz, com `docs/` tolerado).
 
 ### Alterado
 

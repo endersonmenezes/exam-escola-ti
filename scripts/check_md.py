@@ -28,8 +28,14 @@ PTS_ARQUIVO = int(_cfg.get("pts_por_arquivo", 3))
 MAX_LINHAS_BLOCO = int(_cfg.get("max_linhas_bloco", 20))
 
 # Arquivos do esqueleto/template nao pontuam como especificacao do aluno.
-EXCLUIR = {"README.md", "ENUNCIADO.md", "ALUNO.md", "FONTES.md", "CHANGELOG.md"}
-EXCLUIR_PREFIXOS = (".github/", "scripts/", "docs/", "tests/", "variante/",
+# EXCLUIR e por caminho exato e cobre a raiz E os docs do esqueleto
+# (docs/REGRAS.md, docs/TRACKS.md): excluir o prefixo docs/ inteiro zerava o
+# criterio E de quem entregasse a spec em docs/ sem nunca ler os arquivos
+# (caso real da turma 2026 — pasta natural para .md). O matching dos CHECKS
+# e por nome de arquivo (constitution\.md$ casa com docs/constitution.md).
+EXCLUIR = {"README.md", "ENUNCIADO.md", "ALUNO.md", "FONTES.md", "CHANGELOG.md",
+           "docs/REGRAS.md", "docs/TRACKS.md"}
+EXCLUIR_PREFIXOS = (".github/", "scripts/", "tests/", "variante/",
                     "correcao/", "gabarito/", ".prova/", "exams/")
 
 CHECKS = [

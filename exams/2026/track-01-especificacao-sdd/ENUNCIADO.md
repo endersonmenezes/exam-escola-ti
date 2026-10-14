@@ -116,6 +116,10 @@ disciplina e demonstra rigor tecnico. -->
 
 ## O que entregar (estrutura sugerida, livre)
 
+Entregue os `.md` de especificação **na raiz do repositório** (uma pasta
+`docs/` também é lida pelo critério E — escolha um lugar e mantenha tudo
+junto). Sugestão de composição:
+
 - `constitution.md` — convenções persistentes (ex.: "valores monetários sempre
   em centavos inteiros"; "todo endpoint documenta status de erro")
 - `spec.md` — requisitos com **critérios de aceite mensuráveis** por UC

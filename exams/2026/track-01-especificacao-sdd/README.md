@@ -97,7 +97,8 @@ só espelha o arquivo:
 ## Agora
 
 1. Leia `ENUNCIADO.md` **inteiro** (contexto + contrato + checklist do E).
-2. Escreva seus `.md` de especificação (estrutura sugerida: `constitution.md`,
+2. Escreva seus `.md` de especificação **na raiz do repositório** (ou em
+   `docs/` — o critério E lê os dois; estrutura sugerida: `constitution.md`,
    `spec.md`, `plan.md`, `tasks.md`, `tests.md` — nomes e quantidade livres,
    pontuam os 5 melhores).
 3. Faça **commits pequenos e frequentes** ao longo da prova — pushes **não**
