@@ -121,3 +121,26 @@ só espelha o arquivo:
 [^variante]: A variante é derivada do nome do repositório por
     `scripts/variante.py`. Na correção ela é recalculada a partir do nome do
     seu repo, então o `params.json` de outro aluno não serve para você.
+
+---
+
+## ⚠️ Último aviso — este README é seu
+
+Este arquivo, depois de lido, **é seu**: edite-o e indique o que achar
+necessário para a entrega da sua prova — onde está o ponto de entrada da sua
+solução, decisões que tomou, o que o corretor deve olhar primeiro. Editar não
+pontua, mas evita que algo que você fez passe despercebido na correção.
+
+**Nossos — não edite e não crie arquivos dentro:**
+
+- `tests/public/` — testes da correção. Arquivo novo ou alterado aqui **zera
+  a prova** (procedência). Testes próprios são boa prática — crie-os em pasta
+  sua (ex.: `tests/app/`, `meus-testes/`), nunca em `tests/public/`.
+- `contrato.json`, `rubrica.json`, `track.json`, `ENUNCIADO.md` — intocáveis
+  após a aplicação; alteração = zero.
+- `scripts/`, `.github/` — motor da prova e workflows; não edite.
+
+**Seus — crie à vontade:** raiz, `src/`, `app/`, `backend/`, `frontend/`,
+`tests/<sua-pasta>/`, `meus-testes/`, `docs/` (sem alterar o que já veio,
+como `docs/REGRAS.md`). Arquivo novo fora dos caminhos protegidos nunca é
+trampa — é trabalho.

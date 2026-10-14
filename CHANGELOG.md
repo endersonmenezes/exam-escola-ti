@@ -93,6 +93,37 @@ prova de 07/10/2026 não é afetada.
   interface web até o comentário "✅ Prova aplicada" e **clonar/fazer pull só
   depois** — commits locais antes da aplicação só geravam ruído
   ("N commit(s) antes da aplicação") e tamper falsos.
+- **Limpeza pós-aplicação ampliada** (`aplicar_prova.py`, passo 4c): além da
+  árvore `exams/` (commit anterior), o commit de aplicação agora remove
+  `CHANGELOG.md` do template (histórico do sistema de provas, sem sentido no
+  repo do aluno) e varre `__pycache__/`/`*.pyc`/`*.pyo` que vierem com a pasta
+  aplicada. Caminhos protegidos pelo tamper T3 (`scripts/`, `.github/`,
+  `docs/`) nunca são tocados — a limpeza só age fora deles. Simulado de ponta
+  a ponta em repo temporário: raiz final = só os arquivos da track +
+  esqueleto funcional;
+- **Template sem bytecode no disco**: `exams/dummy-exam/__pycache__/` (que o
+  overlay levaria para a raiz do repo do aluno) e `scripts/__pycache__/`
+  removidos do template — o `.gitignore` já os bloqueava, mas o disco do
+  template alimentava repos novos;
+- **`variante.py`**: docstring alinhada ao comportamento real (lê o contrato
+  da RAIZ pós-overlay; `.prova/exam-dir` marca a origem).
+
+### Adicionado
+
+- **"⚠️ Último aviso — este README é seu"** ao final de todo README de track
+  (01/02/03 + dummy): o aluno é convidado a editar o README depois de lê-lo e
+  a indicar o que achar necessário para a entrega — onde está o ponto de
+  entrada da solução, decisões que tomou, o que o corretor deve olhar primeiro
+  (editar não pontua; evita que o básico feito passe despercebido). Motivação
+  real da turma 2026: entregas fora do lugar esperado que o corretor não
+  localizou, e o caso de um aluno que criou testes próprios **dentro** de
+  `tests/public/` e foi zerado por procedência — criar testes é boa prática,
+  desde que fora das pastas da correção. O aviso separa explicitamente o que
+  é nosso (`tests/public/`, `contrato.json`, `rubrica.json`, `track.json`,
+  `ENUNCIADO.md`, `scripts/`, `.github/` — não editar nem criar arquivos
+  dentro) do que é dele (todo o resto: raiz, `src/`, `app/`, `backend/`,
+  `frontend/`, `tests/<sua-pasta>/`, `meus-testes/`, `docs/` sem alterar o
+  que já veio).
 
 ## [1.3.0] — 2026-10-07
 

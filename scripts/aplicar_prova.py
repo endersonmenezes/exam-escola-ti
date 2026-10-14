@@ -207,6 +207,29 @@ def main():
         shutil.rmtree(exams_dir)
     git("rm", "-r", "--quiet", "--cached", "exams", "--ignore-unmatch")
 
+    # 4c) LIMPEZA de itens do TEMPLATE que nao fazem sentido no repo do aluno.
+    #     So tocamos caminhos FORA dos protegidos pelo tamper T3 (scripts/,
+    #     .github/, docs/ sao comparados com o template — nunca os tocamos
+    #     aqui). CHANGELOG.md e o historico do SISTEMA de provas: no repo do
+    #     aluno e ruido e convida a confusao ("meu repo tem changelog de que?").
+    for nome in ("CHANGELOG.md",):
+        alvo = os.path.join(BASE, nome)
+        if os.path.exists(alvo):
+            os.remove(alvo)
+        git("rm", "--quiet", "--cached", "--ignore-unmatch", nome)
+    # varredura defensiva: nenhum artefato de bytecode/python pode vir com a
+    # pasta aplicada (dummy ja teve __pycache__ versionado no disco uma vez).
+    for raiz, dirs, arquivos in os.walk(BASE):
+        if ".git" in raiz.split(os.sep):
+            continue
+        for d in list(dirs):
+            if d == "__pycache__":
+                shutil.rmtree(os.path.join(raiz, d))
+                dirs.remove(d)
+        for a in arquivos:
+            if a.endswith((".pyc", ".pyo")):
+                os.remove(os.path.join(raiz, a))
+
     with open(sentinela, "w", encoding="utf-8") as f:
         f.write(pasta + "\n")
     with open(os.path.join(BASE, ".prova", "exam-dir"), "w", encoding="utf-8") as f:
