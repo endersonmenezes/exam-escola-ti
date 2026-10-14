@@ -128,6 +128,22 @@ junto). Sugestão de composição:
   teto, arredondamento do tempo médio, conflitos mínimos
 - `tasks.md` — decomposição (≥ 3 tarefas)
 
+### Ponto de entrada (obrigatório)
+
+A correção executa **um modelo de IA fixo** sobre os seus `.md` — ele precisa
+saber **por onde começar**. Crie o arquivo `.prova/entrada` (na raiz do
+repositório) contendo o **caminho relativo** do seu arquivo inicial — ex.:
+
+```
+SDD/README.md
+```
+
+Recomendação forte: faça desse arquivo um **índice** — um README com links
+para os demais `.md` da especificação. O modelo lê o arquivo indicado e
+navega pelos links até os N arquivos, em qualquer organização de pastas.
+`.prova/entrada` ausente, caminho inválido ou arquivo inexistente deixa a
+preparação em ❌ e a correção sem ponto de partida.
+
 > [!TIP]
 > Nos casos de borda, uma tabela (entrada → esperado) vale mais que parágrafos.
 > Um *alert* `> [!WARNING]` destacando a regra do teto ajuda o modelo a não a

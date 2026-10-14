@@ -44,6 +44,7 @@ sys.path.insert(0, os.path.join(BASE, "scripts"))
 from variante import slug_do_repo, pasta_do_ano, variante  # noqa: E402
 import prova_issue  # noqa: E402
 import selecao  # noqa: E402
+import track_lock  # noqa: E402
 
 TOKEN = os.environ.get("GH_TOKEN", "")
 REPO_FULL = os.environ.get("REPO_FULL", "")
@@ -166,6 +167,40 @@ def checar_fontes():
             "utilizado.")
 
 
+def checar_entrada():
+    """Ponto de entrada da spec (tracks SDD): o aluno declara em
+    `.prova/entrada` o caminho relativo do arquivo inicial (ex.: SDD/
+    README.md) — a correcao por modelo fixo le o indicado e navega pelos
+    links. So e exigido quando o lockfile declara `suites.md.entrada`
+    (track.json da track, pos-overlay); retorna None nas demais tracks."""
+    cfg_md = track_lock.load(BASE).get("suites", {}).get("md", {})
+    if not cfg_md.get("entrada"):
+        return None
+    entrada_path = os.path.join(BASE, ".prova", "entrada")
+    if not os.path.exists(entrada_path):
+        return ("❌ `.prova/entrada` ausente — a correção precisa saber por onde "
+                "começar a ler a sua especificação: crie o arquivo com o caminho "
+                "do arquivo inicial (ex.: `README.md` ou `SDD/README.md`) e "
+                "commite.")
+    alvo = open(entrada_path, encoding="utf-8", errors="replace").read().strip()
+    if not alvo:
+        return ("❌ `.prova/entrada` vazio — escreva nele o caminho do arquivo "
+                "inicial da sua especificação (ex.: `README.md`).")
+    partes = alvo.replace("\\", "/").split("/")
+    if alvo.startswith("/") or any(p in ("..", "") for p in partes):
+        return ("❌ `.prova/entrada` com caminho inválido (`%s`) — use caminho "
+                "relativo dentro do repo, sem `..` (ex.: `SDD/README.md`)." % alvo)
+    if not os.path.isfile(os.path.join(BASE, *partes)):
+        return ("❌ o arquivo de entrada `%s` não existe — corrija o "
+                "`.prova/entrada` para apontar para um arquivo real do seu "
+                "repo." % alvo)
+    if not alvo.lower().endswith(".md"):
+        return ("⚠️ entrada declarada (`%s`) não é Markdown — a correção "
+                "recomenda um README índice em `.md`, com links para os demais "
+                "arquivos da especificação." % alvo)
+    return "✅ ponto de entrada declarado em `.prova/entrada` → `%s`" % alvo
+
+
 def main():
     if os.environ.get("REPO_FULL", "") == "endersonmenezes/exam-escola-ti":
         print("Repositorio-template — nao e uma prova; no-op.")
@@ -263,6 +298,13 @@ def main():
             prova.append("❌ `variante/params.json` ausente (ele é gerado no commit "
                          "de aplicação) — se você o apagou, rode `python "
                          "scripts/variante.py` localmente e commite o resultado.")
+
+    # 5) ponto de entrada da spec (tracks que declaram suites.md.entrada no
+    #    track.json — ex.: SDD). So vale pos-aplicacao: sem track.json na
+    #    raiz, track_lock.load devolve lock vazio e a exigencia fica desligada.
+    entrada_msg = checar_entrada()
+    if entrada_msg:
+        prova.append(entrada_msg)
 
     todas = identidade + prova
     faltam = [l for l in todas if l.startswith("❌")]

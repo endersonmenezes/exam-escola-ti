@@ -101,13 +101,16 @@ só espelha o arquivo:
    `docs/` — o critério E lê os dois; estrutura sugerida: `constitution.md`,
    `spec.md`, `plan.md`, `tasks.md`, `tests.md` — nomes e quantidade livres,
    pontuam os 5 melhores).
-3. Faça **commits pequenos e frequentes** ao longo da prova — pushes **não**
+3. Crie `.prova/entrada` com o caminho do arquivo inicial da sua spec (ex.:
+   `README.md` ou `SDD/README.md`) — recomendamos um README **índice** com
+   links para os demais `.md` (veja "Ponto de entrada" no ENUNCIADO).
+4. Faça **commits pequenos e frequentes** ao longo da prova — pushes **não**
    disparam correção.
-4. Se usou qualquer consulta (site ou IA), preencha `FONTES.md` antes do push
+5. Se usou qualquer consulta (site ou IA), preencha `FONTES.md` antes do push
    final.
-5. Rode `/auto-correcao` na issue "🎯 Prova" e veja o critério E pontuado.
+6. Rode `/auto-correcao` na issue "🎯 Prova" e veja o critério E pontuado.
    **Obrigatório ao menos 1x.**
-6. **Feche a issue "🎯 Prova"** — isso encerra a prova e gera o
+7. **Feche a issue "🎯 Prova"** — isso encerra a prova e gera o
    `teacher.json` de entrega. Fechar sem `/auto-correcao` reabre a issue com
    aviso. Boa prova! 🚀
 

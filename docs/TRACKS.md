@@ -87,7 +87,13 @@ estilos de prova) sem disparar o que não serve para a track atual.
 > esqueleto `docs/REGRAS.md`/`docs/TRACKS.md` são excluídos por caminho
 > exato) — e o enunciado da track deve dizer **explicitamente** onde o `.md`
 > vai (caso real 2026: specs em `docs/` zeraram o critério E porque o prefixo
-> `docs/` inteiro era excluído).
+> `docs/` inteiro era excluído). Tracks SDD podem declarar
+> `"entrada": true` em `suites.md`: passa a ser obrigatório o aluno criar
+> `.prova/entrada` com o caminho relativo do arquivo inicial da spec (ex.:
+> `SDD/README.md` — recomenda-se um README índice com links); o *Preparar
+> entrega* valida existência/caminho na issue e o `fechar_prova.py` leva o
+> caminho ao `teacher.json` (campo opcional `entrada`) para a correção por
+> modelo saber por onde começar.
 
 > Uma track de **debugging** (app quebrada em containers, ciclo
 > build→logs→corrigir) desliga `estrutura`/`testes-publicos`/`md` e liga os
@@ -196,3 +202,8 @@ preencher seus `outputs`; os demais jobs consomem via
   fonte de verdade e confusão (caso real da turma 2026). A variante é gerada
   pelo sistema no commit de aplicação; o aluno só lê
   `variante/params.json`.
+- ❌ Enunciado que não diz **onde** o entregável vai (pasta, nome): o aluno
+  segue a pasta que vê na frente dele — caso real 2026: a prova inteira feita
+  dentro de `exams/2026/track-03-crud/...` (a árvore `exams/` do template
+  ficava no repo do aluno; hoje o aplicar a remove no commit de aplicação,
+  mas o enunciado continua precisando dizer o lugar certo em voz alta).

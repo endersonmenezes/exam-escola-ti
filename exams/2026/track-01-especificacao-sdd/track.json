@@ -13,7 +13,8 @@
     "md": {
       "pontos": 15,
       "pts_por_arquivo": 3,
-      "max_linhas_bloco": 20
+      "max_linhas_bloco": 20,
+      "entrada": true
     },
     "escondidos": {
       "via": "CORRECAO_REPO",
