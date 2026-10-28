@@ -68,7 +68,7 @@ estilos de prova) sem disparar o que não serve para a track atual.
 | Chave | Job | Desliga quando a track… |
 | --- | --- | --- |
 | `auto-correcao.trampas` | `trampas` | — (mantenha `true`; é o anti-cola e o gate da janela) |
-| `auto-correcao.estrutura` | `estrutura` | não tiver Containerfile/README como entrega |
+| `auto-correcao.estrutura` | `estrutura` | não tiver Containerfile como entrega mínima (o critério de README saiu daqui — ver job `readme` abaixo) |
 | `auto-correcao.testes-publicos` | `testes-publicos` | não tiver suíte pública (ex.: prova de debugging) |
 | `auto-correcao.testes-escondidos` | `testes-escondidos` | não tiver suíte escondida |
 | `auto-correcao.md` | `md` | não for de especificação (entregável em `.md`, critério E mecânico via `scripts/check_md.py`) |
@@ -77,6 +77,17 @@ estilos de prova) sem disparar o que não serve para a track atual.
 | `auto-correcao.smoke` | `smoke` | não tiver smoke de ponta a ponta (debugging; `scripts/smoke.py` cuida do ciclo compose, a track entrega as checagens em `smoke_track.py` na raiz — mesmo padrão do `tests_publicos.py`) |
 | `auto-correcao.metodo` | `metodo` | não avaliar método de debug (commits hipótese→correção; `scripts/check_metodo.py`, config `suites.metodo`: `pontos`/`relatorio`) |
 | `auto-correcao.nota` | `nota` | — (mantenha `true`; sem nota não há feedback) |
+
+> **Job universal `readme` (sem chave no lockfile).** Roda em **toda** track
+> aplicada (`aplicada == true`), porque higiene de README é transversal:
+> `scripts/check_readme.py` compara o `README.md` com o do commit de
+> aplicação (mesma técnica do T5) e, se estiver **idêntico ao texto da
+> prova** (ou ausente), comenta a penalidade na issue "🎯 Prova" (upsert —
+> o mesmo comentário vira ✅ quando o aluno corrige) e zera o critério. Se
+> atualizado, pontua com o peso `readme` da rubrica quando a track o
+> declarar (`criterios.readme` — ex.: track-03-crud 2026 = 5); sem peso
+> declarado, emite só observação. A heurística de regex antiga (ex-`estrutura`)
+> dava 5/5 para README não editado — o próprio enunciado casa os padrões.
 
 > Uma track de **especificação** (o aluno entrega só `.md`, sem app nem
 > Containerfile) liga `md` e desliga `estrutura`/`testes-publicos`; o job `md`

@@ -107,7 +107,7 @@ jobs:
           if-no-files-found: ignore
 
   estrutura:
-    name: Dockerfile + README (critérios funcionais de entrega)
+    name: Containerfile/Dockerfile (entrega mínima)
     needs: [config, trampas]
     if: github.repository != 'endersonmenezes/exam-escola-ti' && always() && needs.config.outputs.estrutura == 'true' && needs.trampas.outputs.zerado != 'true'
     runs-on: ubuntu-slim
@@ -122,6 +122,32 @@ jobs:
         with:
           name: result-entrega
           path: result-entrega.json
+          if-no-files-found: ignore
+
+  readme:
+    # UNIVERSAL: nao tem chave no track.json — roda em toda track aplicada.
+    # Penaliza README idêntico ao da prova (aviso na issue, upsert) e pontua
+    # o criterio `readme` quando a rubrica da track declara peso para ele.
+    name: README do aluno (0 pts se seguir com o texto da prova)
+    needs: [config, trampas]
+    if: github.repository != 'endersonmenezes/exam-escola-ti' && always() && needs.config.outputs.aplicada == 'true' && needs.trampas.outputs.zerado != 'true'
+    runs-on: ubuntu-slim
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - run: python scripts/check_readme.py
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO_FULL: ${{ github.repository }}
+      - if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: result-readme
+          path: result-readme.json
           if-no-files-found: ignore
 
   testes-publicos:
@@ -271,7 +297,7 @@ jobs:
 
   nota:
     name: Nota parcial
-    needs: [config, trampas, estrutura, testes-publicos, testes-escondidos, md, compila, sobe, smoke, metodo]
+    needs: [config, trampas, estrutura, readme, testes-publicos, testes-escondidos, md, compila, sobe, smoke, metodo]
     if: github.repository != 'endersonmenezes/exam-escola-ti' && always() && needs.config.outputs.aplicada == 'true' && needs.config.outputs.nota == 'true'
     runs-on: ubuntu-slim
     steps:

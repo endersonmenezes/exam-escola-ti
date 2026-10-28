@@ -1,8 +1,14 @@
 #!/usr/bin/env python3
-"""Critérios de entrega: Containerfile/Dockerfile (15) e README com instruções (5).
+"""Criterio funcional de entrega: Containerfile/Dockerfile (15).
 
 O 'Dockerfile funcional' completo (suíte sobe sem ajustes) é confirmado pelos
 jobs de teste; aqui se verifica a presença e o formato mínimo.
+
+O critério de README saiu daqui para o scripts/check_readme.py (job
+universal `readme`, que roda em TODAS as tracks aplicadas): a heurística
+de regex dava 5/5 para o README não editado — o próprio enunciado casa os
+padrões. O check novo compara com o README do commit de aplicação e ainda
+comenta a penalidade na issue da prova.
 """
 import json
 import os
@@ -24,6 +30,7 @@ def peso(nome, default):
                 pass
     return default
 
+
 dockerfile = os.path.join(BASE, "Containerfile")
 if not os.path.exists(dockerfile):
     dockerfile = os.path.join(BASE, "Dockerfile")
@@ -42,19 +49,6 @@ else:
     else:
         criterios.append({"criterio": "Dockerfile", "pontos": 7, "max": peso("dockerfile", 15)})
         obs.append("%s presente, mas sem EXPOSE 8080 ou sem CMD/ENTRYPOINT." % nome)
-
-readme = os.path.join(BASE, "README.md")
-texto = open(readme, encoding="utf-8", errors="replace").read() if os.path.exists(readme) else ""
-tem_local = re.search(r"(local|localhost|dev)", texto, re.I) and re.search(r"(rodar|subir|executar|run)", texto, re.I)
-tem_container = re.search(r"(docker|container)", texto, re.I)
-if tem_local and tem_container:
-    criterios.append({"criterio": "README (instruções)", "pontos": peso("readme", 5), "max": peso("readme", 5)})
-elif tem_local or tem_container:
-    criterios.append({"criterio": "README (instruções)", "pontos": 2, "max": peso("readme", 5)})
-    obs.append("README cobre só local ou só container.")
-else:
-    criterios.append({"criterio": "README (instruções)", "pontos": 0, "max": peso("readme", 5)})
-    obs.append("README sem instruções de subida.")
 
 resultado = {"job": "entrega", "criterios": criterios, "obs": obs}
 with open(os.path.join(BASE, "result-entrega.json"), "w", encoding="utf-8") as f:

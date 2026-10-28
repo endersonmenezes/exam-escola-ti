@@ -8,6 +8,33 @@ Todas as mudanças notáveis do sistema de provas da Escola de TI
 > em prova real. As turmas que exercitaram o sistema até aqui usaram-no como
 > aula teste (prova dummy "Hello World").
 
+## [Unreleased]
+
+### Adicionado
+
+- **Job universal `readme` no Auto-correção** (`scripts/check_readme.py`):
+  roda em **todas** as tracks aplicadas (sem chave no `track.json`) e
+  ataca o falso positivo do critério de README — o README **não editado**
+  da track-03-crud pontuava 5/5 porque o próprio enunciado casa as regexes
+  ("instruções de subida (local e container)", `rodar_testes.sh`). Agora o
+  check principal é de **procedência**: `git diff` contra o README do
+  commit de aplicação (mesma técnica do T5). Idêntico (ou ausente) = 0 no
+  critério **e aviso na issue "🎯 Prova"** (upsert por marcador — o mesmo
+  comentário vira ✅ quando o aluno corrige), com a orientação de que o
+  README deve conter instruções sobre o trabalho realizado, não o enunciado.
+
+### Mudado
+
+- **`check_entrega.py` virou Dockerfile-only** (o critério de README
+  migrou para o `check_readme.py`); o job `estrutura` segue valendo só
+  para as tracks com Containerfile como entrega mínima.
+
+> ⚠️ **Operação:** workflows e scripts vivem no repo gerado a partir do
+> template — a melhoria vale para repos gerados **após** o push. Repose
+> já existentes (aplicados ou não) continuam com o check antigo; o
+> tamper-check T3 compara contra o SHA do template da aplicação
+> (`.prova/template-ref`), então o push **não** gera falso tamper neles.
+
 ## [1.4.0] — 2026-10-14
 
 Mudanças pós-aplicação da Prova 01/2026 (feedback do docente com ~68 alunos):

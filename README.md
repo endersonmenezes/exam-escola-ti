@@ -204,7 +204,9 @@ nunca é aplicado por engano no dia de uma prova real.
 │   ├── fechar_prova.py   fecha a prova: gera teacher.json (schema 1) na raiz
 │   ├── track_lock.py     lockfile track.json (liga/desliga jobs, CLI get/show/check)
 │   ├── check_trampas.py  T2/T3/T4/T5 — identidade, autoria, janela, integridade
-│   ├── check_entrega.py  critérios de entrega (Containerfile, README)
+│   ├── check_entrega.py  Containerfile/Dockerfile de entrega (mínimo)
+│   ├── check_readme.py   README do aluno — zera se idêntico ao da prova
+│   │                     (aviso na issue) + pontua com peso `readme` da rubrica
 │   ├── rodar_testes.sh   build + sobe o container + pytest (testes públicos)
 │   ├── score_publicos.py pontua o pytest a partir do log (peso da rubrica)
 │   ├── nota.py           agrega result-*.json + Summary + comentário de nota
