@@ -8,10 +8,15 @@ Todas as mudanças notáveis do sistema de provas da Escola de TI
 > em prova real. As turmas que exercitaram o sistema até aqui usaram-no como
 > aula teste (prova dummy "Hello World").
 
-## [Unreleased]
+## [1.5.0] — 2026-10-28
 
 ### Adicionado
 
+- **Prova 02/2026 — `exams/2026/track-04-especificacao-sdd-pizzaria`**: nova
+  track de especificação SDD (domínio pizzaria — pedidos, esteira de preparo,
+  taxa de entrega, desconto percentual com ceil, relatório diário). Espelha a
+  track-01: mesma rubrica (A–E), variante por `extras`, T7, `.prova/entrada`
+  obrigatório, janela 120 min;
 - **Job universal `readme` no Auto-correção** (`scripts/check_readme.py`):
   roda em **todas** as tracks aplicadas (sem chave no `track.json`) e
   ataca o falso positivo do critério de README — o README **não editado**
