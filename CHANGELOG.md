@@ -14,9 +14,12 @@ Todas as mudanças notáveis do sistema de provas da Escola de TI
 
 - **Prova 02/2026 — `exams/2026/track-04-especificacao-sdd-pizzaria`**: nova
   track de especificação SDD (domínio pizzaria — pedidos, esteira de preparo,
-  taxa de entrega, desconto percentual com ceil, relatório diário). Espelha a
-  track-01: mesma rubrica (A–E), variante por `extras`, T7, `.prova/entrada`
-  obrigatório, janela 120 min;
+  mesas/comandas, fechamento de conta com gorjeta configurável por país,
+  divisão de conta com resto de centavos, cardápio com disponibilidade e
+  fidelidade por selos). Espelha a track-01: mesma rubrica (A–E), variante por
+  `extras` (inclui `GORJETA_PADRAO_PERCENTUAL`), T7, `.prova/entrada`
+  obrigatório, janela 120 min; 16 UCs com precedência de erros completa
+  (formato 422 → comanda 422 → sabor indisponível 409 → pedido ativo 409);
 - **Job universal `readme` no Auto-correção** (`scripts/check_readme.py`):
   roda em **todas** as tracks aplicadas (sem chave no `track.json`) e
   ataca o falso positivo do critério de README — o README **não editado**

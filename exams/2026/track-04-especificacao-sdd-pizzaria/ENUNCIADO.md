@@ -10,10 +10,15 @@ uma API REST de pedidos de uma pizzaria ("Pizzaria").
 
 ## Contexto
 
-Uma pizzaria precisa de uma API para registrar pedidos (balcão ou entrega),
-acompanhar a esteira de preparo (recebido → preparo → pronto → entregue),
-cancelar pedidos antes de irem ao forno e fechar o relatório diário de vendas.
-O front do balcão não existe — **somente a API** é objeto desta prova.
+Uma pizzaria precisa de uma API para registrar pedidos (salão, balcão ou
+entrega), acompanhar a esteira de preparo (recebido → preparo → pronto →
+entregue), gerenciar **mesas e comandas** (vários pedidos por mesa,
+fechamento de conta com **gorjeta**), cancelar pedidos antes de irem ao forno
+e fechar o relatório diário de vendas. O salão é autônomo: garçons abrem
+comandas pelo número da mesa e fecham a conta quando tudo foi servido. Como a
+pizzaria pode operar em **qualquer país**, o costume de gorjeta muda — o
+sistema trata isso como configuração, não como constante. O front do salão
+não existe — **somente a API** é objeto desta prova.
 
 ## Seus parâmetros (variante)
 
@@ -27,8 +32,9 @@ na issue "🎯 Prova" é só uma cópia dele):
 | --- | --- |
 | `PRECO_BROTO_CENTAVOS` | Preço unitário da pizza broto, em centavos |
 | `PRECO_GRANDE_CENTAVOS` | Preço unitário da pizza grande, em centavos |
-| `TAXA_ENTREGA_CENTAVOS` | Taxa cobrada em pedidos tipo **entrega** (pedidos de balcão não pagam taxa) |
+| `TAXA_ENTREGA_CENTAVOS` | Taxa cobrada em pedidos tipo **entrega** (pedidos de balcão e de mesa não pagam taxa) |
 | `DESCONTO_PROMO_PERCENTUAL` | Percentual de desconto sobre o subtotal das **pizzas** (nunca sobre a taxa), arredondando **para cima** |
+| `GORJETA_PADRAO_PERCENTUAL` | Percentual de gorjeta sugerido no **fechamento da conta** (0, 10 ou 15) — 0 = cultura **sem** gorjeta; o fechamento aceita outro valor por requisição |
 | `PORTA_SERVICO` | Porta em que o serviço gerado deve escutar (para a suíte de correção) |
 
 ## Contrato (obrigatório, exato)
@@ -47,7 +53,8 @@ Base URL: `http://localhost:{PORTA_SERVICO}`
 {"id": 1, "cliente": "Ana Souza",
  "itens": [{"sabor": "mussarela", "tamanho": "grande", "quantidade": 2,
             "valor_unitario_centavos": 5000}],
- "tipo": "entrega", "recebido_em": "<ISO-8601 com fuso -03:00>",
+ "tipo": "entrega", "comanda_id": null,
+ "recebido_em": "<ISO-8601 com fuso -03:00>",
  "status": "recebido",
  "subtotal_pizzas_centavos": 10000, "taxa_entrega_centavos": 500,
  "desconto_centavos": 1000, "total_centavos": 9500}
@@ -57,7 +64,8 @@ Regras de valor:
 - `subtotal_pizzas_centavos` = soma de (valor unitário do tamanho × quantidade)
   dos itens — broto = `PRECO_BROTO_CENTAVOS`, grande = `PRECO_GRANDE_CENTAVOS`;
 - `taxa_entrega_centavos` = `TAXA_ENTREGA_CENTAVOS` quando `tipo = entrega`;
-  **0** quando `tipo = balcao`;
+  **0** quando `tipo = balcao` **ou `tipo = mesa`** (em mesa, quem fecha a
+  conta é a gorjeta — UC11);
 - `desconto_centavos` = subtotal × `DESCONTO_PROMO_PERCENTUAL` ÷ 100,
   **arredondando para cima** em centavos (ceil) — incide **somente sobre as
   pizzas, nunca sobre a taxa**; percentual 0 → desconto sempre 0;
@@ -66,7 +74,13 @@ Regras de valor:
 
 Validações do body: `cliente` (string 2..60), `itens` (array 1..20; cada item
 com `sabor` string 2..30, `tamanho` `"broto"|"grande"`, `quantidade` int
-1..10), `tipo` (`"entrega"|"balcao"`).
+1..10), `tipo` (`"entrega"|"balcao"|"mesa"`).
+
+Quando `tipo = mesa`, o body exige **`comanda_id`** (int) apontando para uma
+comanda **aberta** (UC9) — comanda inexistente ou fechada → **422**
+`{"erro": "comanda_invalida"}`. `comanda_id` presente com `tipo` diferente de
+`mesa` → **422** `{"erro": "comanda_invalida"}`. No `201`, `comanda_id` reflete
+o vínculo (`null` nos demais tipos).
 
 O body aceita **`recebido_em` opcional** (ISO-8601 com fuso): quando presente,
 o pedido é datado naquele instante em vez de "agora". É o gancho de
@@ -89,7 +103,9 @@ terminal**.
  "faturamento_centavos": 123400, "ticket_medio_centavos": 10284}
 ```
 Considera pedidos **recebidos na data** (campo `recebido_em`) e **não
-cancelados**. `ticket_medio_centavos` = faturamento ÷ total_pedidos,
+cancelados** — inclusive pedidos de mesa. `faturamento_centavos` = soma dos
+`total_centavos` (a **gorjeta não entra** — é dos garçons, não da casa; UC11).
+`ticket_medio_centavos` = faturamento ÷ total_pedidos,
 arredondando **0,5 para cima**. Dia sem pedidos → zeros (não é erro).
 
 ### UC5 — Cancelar pedido
@@ -112,20 +128,122 @@ subtotal 333 → 34.
 ### UC8 — Um pedido ativo por cliente
 `POST /pedidos` para cliente que já tem pedido com status `recebido`,
 `preparo` ou `pronto` → **409** `{"erro": "pedido_em_aberto"}`. Após entregue
-ou cancelado, o cliente pode pedir novamente.
+ou cancelado, o cliente pode pedir novamente. Vale para os tipos `entrega` e
+`balcao`; pedidos tipo `mesa` ficam **fora** da regra — quem agrupa a mesa é a
+comanda, e ela pode acumular vários pedidos ativos ao mesmo tempo.
+
+### UC9 — Abrir comanda (ocupar mesa)
+`POST /mesas/{numero}/comandas` → **201**:
+```json
+{"id": 1, "mesa": 7, "aberta_em": "<ISO-8601 com fuso -03:00>", "status": "aberta"}
+```
+Mesa com comanda aberta → **409** `{"erro": "mesa_ocupada"}` (uma comanda
+aberta por mesa; após o fechamento, a mesa pode reabrir). Número de mesa fora
+de 1..50 → **422** `{"erro": "mesa_invalida"}`.
+
+### UC10 — Pedido de mesa
+Extensão do UC1: `tipo = "mesa"` exige `comanda_id` de uma comanda **aberta**.
+O pedido segue a **mesma esteira** do UC2 — `entregue` significa *servido na
+mesa*. Taxa de entrega = 0; o desconto promocional aplica normalmente. Uma
+comanda acumula vários pedidos, cada um com seu próprio ciclo.
+
+### UC11 — Fechamento de conta (com gorjeta)
+`POST /comandas/{id}/fechamento` → **200**:
+```json
+{"id": 1, "mesa": 7, "aberta_em": "<ISO-8601>", "fechada_em": "<ISO-8601 com fuso -03:00>",
+ "pedidos_entregues": 3, "subtotal_centavos": 30500,
+ "gorjeta_centavos": 3050, "total_centavos": 33550}
+```
+- Consolida os pedidos **entregues** (não cancelados) da comanda:
+  `subtotal_centavos` = soma dos `total_centavos` deles;
+- A comanda ainda tem pedido em `recebido`, `preparo` ou `pronto` → **409**
+  `{"erro": "comanda_com_pedidos_abertos"}` (a cozinha tem de servir tudo
+  antes de fechar). Fechamento repetido → **409**
+  `{"erro": "comanda_ja_fechada"}`;
+- **Gorjeta**: a pizzaria pode operar em países com costumes diferentes, então
+  o percentual é configurável. Body opcional `gorjeta_percentual` (int 0..30);
+  **ausente = `GORJETA_PADRAO_PERCENTUAL`** da variante (0 = cultura sem
+  gorjeta). Fora de 0..30 → **422** `{"erro": "gorjeta_invalida"}`.
+  `gorjeta_centavos` = `ceil(subtotal × pct / 100)` (mesmo arredondamento do
+  desconto); `total_centavos` = subtotal + gorjeta;
+- A gorjeta **não** entra no `faturamento_centavos` do UC4 (gorjeta é dos
+  garçons, não da casa);
+- **Divisão** (UC15): o body aceita `dividir_em` — quando presente, a resposta
+  inclui `parcelas_centavos`.
+
+### UC12 — Listar comandas abertas
+`GET /comandas/abertas` → **200** com array das comandas abertas, **mais
+antigas primeiro** (quem chegou primeiro atende primeiro).
+
+### UC13 — Histórico da mesa
+`GET /mesas/{numero}/comandas` → **200** com array de **todas** as comandas da
+mesa (abertas e fechadas), mais recentes primeiro. Mesa que nunca teve comanda
+→ array vazio. Número fora de 1..50 → **422** `{"erro": "mesa_invalida"}`.
+
+### UC14 — Cardápio com disponibilidade
+O cardápio é **aberto**: qualquer sabor (string 2..30) é aceito em pedidos e
+nasce **disponível**. A cozinha marca o que acabou:
+- `PUT /cardapio/{sabor}` — body `{"disponivel": false}` → **200**
+  `{"sabor": "catupiry", "disponivel": false}` (matching por nome, sem
+  distinção de maiúsculas/minúsculas);
+- `GET /cardapio` → **200** com os sabores conhecidos (que apareceram em
+  algum pedido ou foram explicitamente marcados), ordenados alfabeticamente,
+  com a disponibilidade;
+- Pedido com item de sabor **indisponível** → **409**
+  `{"erro": "sabor_indisponivel"}` — nenhum item do pedido é gravado.
+  Precedência: validação de formato (422) → sabor indisponível (409) →
+  cliente com pedido ativo (409, UC8);
+- Pedido de mesa (`tipo = mesa`) com sabor indisponível segue a mesma regra
+  (antes de validar a comanda? Não — **formato 422 → comanda 422 → sabor
+  indisponível 409 → pedido ativo 409**).
+
+### UC15 — Divisão da conta
+No fechamento (UC11), body opcional **`dividir_em`** (int 2..10, número de
+pagadores). Presente, a resposta ganha:
+```json
+"parcelas_centavos": [11184, 11183, 11183]
+```
+Regras: `parcelas_centavos` tem exatamente `dividir_em` inteiros, **soma ==
+`total_centavos`** (subtotal + gorjeta), e a diferença entre a maior e a menor
+parcela é de **no máximo 1 centavo** — o resto da divisão inteira fica com as
+**primeiras** parcelas. Fora de 2..10 → **422** `{"erro": "divisao_invalida"}`.
+Ausente → o campo `parcelas_centavos` não aparece na resposta.
+
+### UC16 — Fidelidade (cartão de selos)
+A pizzaria tem cartão de selos: **a cada 5 pedidos entregues** do cliente
+(qualquer tipo; cancelados não contam), **o próximo pedido** ganha
+`desconto_fidelidade_centavos = PRECO_BROTO_CENTAVOS`:
+- No `201` do pedido premiado aparece `desconto_fidelidade_centavos`
+  (nos demais, 0);
+- Aplicação: `total_centavos = subtotal − desconto_promo + taxa −
+  desconto_fidelidade`, com **piso 0** — a API nunca devolve total negativo;
+- O resgate é de **uso único** e acontece na criação: cancelar o pedido
+  premiado em `recebido` (UC5) **devolve** o resgate — o cliente fica
+  elegível novamente;
+- Pedidos tipo `mesa` contam selos normalmente (pelo `cliente`), mas o
+  desconto fidelidade aplica no pedido, não na comanda.
 
 ### Erros
 | Situação | Status | Body |
 | --- | --- | --- |
 | Cliente ausente ou fora de 2..60 caracteres | 422 | `{"erro": "cliente_invalido"}` |
 | Itens vazio, > 20, tamanho inválido ou quantidade fora de 1..10 | 422 | `{"erro": "itens_invalidos"}` |
-| Tipo fora de `entrega\|balcao` | 422 | `{"erro": "tipo_invalido"}` |
+| Tipo fora de `entrega\|balcao\|mesa` | 422 | `{"erro": "tipo_invalido"}` |
+| `tipo = mesa` sem `comanda_id` válido e aberto (ou `comanda_id` com outro tipo) | 422 | `{"erro": "comanda_invalida"}` |
 | `recebido_em` fora de ISO-8601 | 422 | `{"erro": "recebido_invalido"}` |
 | `data` fora de `AAAA-MM-DD` | 422 | `{"erro": "data_invalida"}` |
+| Número de mesa fora de 1..50 | 422 | `{"erro": "mesa_invalida"}` |
+| `gorjeta_percentual` fora de 0..30 | 422 | `{"erro": "gorjeta_invalida"}` |
+| `dividir_em` fora de 2..10 | 422 | `{"erro": "divisao_invalida"}` |
 | Pedido inexistente | 404 | `{"erro": "pedido_nao_encontrado"}` |
+| Comanda inexistente | 404 | `{"erro": "comanda_nao_encontrada"}` |
 | Avançar pedido já entregue | 409 | `{"erro": "pedido_ja_finalizado"}` |
 | Cancelar pedido em preparo/pronto/entregue | 409 | `{"erro": "pedido_nao_cancelavel"}` |
 | Criar pedido com cliente já tendo pedido ativo | 409 | `{"erro": "pedido_em_aberto"}` |
+| Criar pedido com sabor indisponível | 409 | `{"erro": "sabor_indisponivel"}` |
+| Abrir comanda em mesa ocupada | 409 | `{"erro": "mesa_ocupada"}` |
+| Fechar comanda já fechada | 409 | `{"erro": "comanda_ja_fechada"}` |
+| Fechar comanda com pedidos ainda abertos | 409 | `{"erro": "comanda_com_pedidos_abertos"}` |
 
 ## Exemplo de resposta do relatório (ilustrativo)
 
@@ -154,8 +272,12 @@ junto). Sugestão de composição:
 - `spec.md` — requisitos com **critérios de aceite mensuráveis** por UC
 - `plan.md` — decisões técnicas com justificativa (stack, persistência, relógio)
 - `tests.md` — **casos de borda por regra**: desconto com ceil (9999 × 10%),
-  adjacência do percentual, taxa zero de balcão, cancelamento liberando o
-  cliente, ticket médio com 0,5 para cima, precedência 422 antes de 409
+  adjacência do percentual, taxa zero de balcão e de mesa, cancelamento
+  liberando o cliente, ticket médio com 0,5 para cima, precedência 422 antes
+  de 409 (formato → comanda → sabor indisponível → pedido ativo), fechamento
+  bloqueado por pedido em preparo, gorjeta com default da variante e override,
+  divisão com resto de centavos, selos (o 6º pedido premiado, piso 0 no
+  total, devolução do resgate no cancelamento)
 - `tasks.md` — decomposição (≥ 3 tarefas)
 
 ### Ponto de entrada (obrigatório)

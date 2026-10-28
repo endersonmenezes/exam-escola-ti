@@ -21,7 +21,7 @@ configuração para todos os alunos). A prova avalia sua capacidade de
 
 | Critério | Pontos |
 | --- | --- |
-| A — Contrato REST (suíte de correção, UC1–UC8) | 30 |
+| A — Contrato REST (suíte de correção, UC1–UC16) | 30 |
 | B — Casos de borda (suíte de correção, testes não revelados) | 25 |
 | C — Requisitos além dos óbvios (suíte de correção, escondida) | 15 |
 | D — SDLC do código gerado (Containerfile, manifesto de deps, README, testes próprios) | 15 |
@@ -36,7 +36,7 @@ configuração para todos os alunos). A prova avalia sua capacidade de
 
 ## Suas ferramentas neste repo
 
-- **Enunciado**: `ENUNCIADO.md` (contexto, contrato dos UC1–UC8, checklist do
+- **Enunciado**: `ENUNCIADO.md` (contexto, contrato dos UC1–UC16, checklist do
   critério E) — leia **inteiro** antes de escrever
 - **Contrato máquina-legível**: `contrato.json` (o mesmo contrato, para a
   correção)
@@ -57,8 +57,9 @@ só espelha o arquivo:
 | --- | --- |
 | `PRECO_BROTO_CENTAVOS` | Preço unitário da pizza broto, em centavos |
 | `PRECO_GRANDE_CENTAVOS` | Preço unitário da pizza grande, em centavos |
-| `TAXA_ENTREGA_CENTAVOS` | Taxa cobrada em pedidos tipo **entrega** (balcão não paga) |
+| `TAXA_ENTREGA_CENTAVOS` | Taxa cobrada em pedidos tipo **entrega** (balcão e mesa não pagam) |
 | `DESCONTO_PROMO_PERCENTUAL` | Percentual de desconto sobre o subtotal das pizzas (nunca sobre a taxa), arredondando **para cima** |
+| `GORJETA_PADRAO_PERCENTUAL` | Percentual de gorjeta sugerido no **fechamento da conta** (0 = cultura sem gorjeta; o fechamento aceita outro valor por requisição) |
 | `PORTA_SERVICO` | Porta em que o serviço gerado deve escutar na correção |
 
 ## Regras
