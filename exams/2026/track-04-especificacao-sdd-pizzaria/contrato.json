@@ -1,0 +1,286 @@
+{
+  "meta": {
+    "titulo": "Prova 02 · Track 04 — Pizzaria (especificação SDD)",
+    "versao": "2026",
+    "track": "track-04-especificacao-sdd-pizzaria",
+    "correcao": {
+      "modelo": "kimi-2.8-preview-2026",
+      "harness": false,
+      "contexto_tokens": 256000,
+      "observacao": "O codigo e gerado pelo Kimi 2.8 (Preview 2026) SEM harness — apenas o agente, em janela de 256k tokens, executando a tarefa proposta pelos .md do aluno. Mesmo modelo e configuracao para todos; a unica variavel e a qualidade da especificacao."
+    },
+    "aviso": "O entregavel do aluno sao ESPECIFICACOES em .md; na correcao, um modelo de IA fixo (ver meta.correcao) gera o codigo a partir delas e a suite valida ESTE contrato exatamente (status codes, nomes de campos, regras de arredondamento). O enunciado em prosa esta no ENUNCIADO.md; este arquivo e a versao maquina-legivel do mesmo contrato."
+  },
+  "variante": {
+    "descricao": "A variante de cada aluno deriva do NOME DO REPOSITORIO aplicado a estas tabelas (hash sha256: opcoes = escolha por modulo; base/passo/faixa = base + (h % faixa) * passo). A correcao recomputa os mesmos valores — copiar params.json de colega nao funciona.",
+    "extras": {
+      "PRECO_BROTO_CENTAVOS": {
+        "base": 2500,
+        "passo": 250,
+        "faixa": 5
+      },
+      "PRECO_GRANDE_CENTAVOS": {
+        "base": 4500,
+        "passo": 500,
+        "faixa": 4
+      },
+      "TAXA_ENTREGA_CENTAVOS": {
+        "opcoes": [
+          0,
+          300,
+          500
+        ]
+      },
+      "DESCONTO_PROMO_PERCENTUAL": {
+        "opcoes": [
+          0,
+          10,
+          15
+        ]
+      },
+      "PORTA_SERVICO": {
+        "base": 8001,
+        "passo": 1,
+        "faixa": 5
+      }
+    },
+    "uso": {
+      "PRECO_BROTO_CENTAVOS": "Preco unitario da pizza broto, em centavos (2500..3500)",
+      "PRECO_GRANDE_CENTAVOS": "Preco unitario da pizza grande, em centavos (4500..6000)",
+      "TAXA_ENTREGA_CENTAVOS": "Taxa cobrada em pedidos tipo entrega (0, 300 ou 500); pedidos de balcao nao pagam taxa",
+      "DESCONTO_PROMO_PERCENTUAL": "Percentual de desconto sobre o subtotal das PIZZAS (0, 10 ou 15); nunca incide sobre a taxa de entrega; arredondamento para CIMA em centavos",
+      "PORTA_SERVICO": "Porta em que o servico gerado deve escutar na correcao (8001..8005)"
+    }
+  },
+  "servidor": {
+    "porta_interna": 8080,
+    "fuso": "-03:00",
+    "base_url_suite": "http://localhost:{PORTA_SERVICO}",
+    "sem_env_obrigatoria": true,
+    "observacao": "O codigo GERADO (na correcao) deve subir em container e escutar na PORTA_SERVICO da variante. Data/hora em ISO-8601 com fuso -03:00."
+  },
+  "endpoints": [
+    {
+      "id": "criar_pedido",
+      "uc": "UC1",
+      "metodo": "POST",
+      "path": "/pedidos",
+      "requisicao": {
+        "body": {
+          "cliente": "obrigatória — string 2..60 caracteres (ex.: Ana Souza)",
+          "itens": "obrigatório — array 1..20; cada item: sabor (string 2..30), tamanho (\"broto\"|\"grande\"), quantidade (int 1..10)",
+          "tipo": "obrigatório — \"entrega\" | \"balcao\"",
+          "recebido_em": "opcional — ISO-8601 com fuso (ex.: 2026-10-28T19:30:00-03:00); default = agora. Gancho de testabilidade: a suite de correcao usa para datar pedidos sem esperar tempo real. Ausencia = relogio; formato invalido = 422 recebido_invalido"
+        }
+      },
+      "respostas": {
+        "201": {
+          "corpo": {
+            "id": 1,
+            "cliente": "Ana Souza",
+            "itens": [
+              {
+                "sabor": "mussarela",
+                "tamanho": "grande",
+                "quantidade": 2,
+                "valor_unitario_centavos": 5000
+              }
+            ],
+            "tipo": "entrega",
+            "recebido_em": "<ISO-8601 com fuso -03:00>",
+            "status": "recebido",
+            "subtotal_pizzas_centavos": 10000,
+            "taxa_entrega_centavos": 500,
+            "desconto_centavos": 1000,
+            "total_centavos": 9500
+          }
+        },
+        "422": {
+          "corpo": {
+            "erro": "cliente_invalido | itens_invalidos | tipo_invalido | recebido_invalido"
+          },
+          "quando": "cliente ausente ou fora de 2..60 caracteres; itens vazio/mais de 20/tamanho invalido/quantidade fora de 1..10; tipo fora de entrega|balcao; recebido_em presente mas fora de ISO-8601"
+        },
+        "409": {
+          "corpo": {
+            "erro": "pedido_em_aberto"
+          },
+          "quando": "cliente ja tem pedido ativo (regra UC8)"
+        }
+      },
+      "regras_valor": [
+        "subtotal_pizzas_centavos = soma de (valor_unitario_centavos do tamanho x quantidade) dos itens: broto = PRECO_BROTO_CENTAVOS, grande = PRECO_GRANDE_CENTAVOS",
+        "taxa_entrega_centavos = TAXA_ENTREGA_CENTAVOS quando tipo = entrega; 0 quando tipo = balcao",
+        "desconto_centavos = subtotal_pizzas x DESCONTO_PROMO_PERCENTUAL / 100, ARREDONDANDO PARA CIMA em centavos (ceil); incide somente sobre as pizzas, NUNCA sobre a taxa de entrega",
+        "total_centavos = subtotal_pizzas - desconto + taxa, sempre inteiro em centavos — a API nunca retorna ponto flutuante"
+      ]
+    },
+    {
+      "id": "avancar_status",
+      "uc": "UC2",
+      "metodo": "POST",
+      "path": "/pedidos/{id}/status",
+      "descricao": "Avanca o pedido um passo na esteira: recebido -> preparo -> pronto -> entregue. entregue e terminal.",
+      "respostas": {
+        "200": {
+          "corpo": {
+            "id": 1,
+            "status": "preparo"
+          }
+        },
+        "404": {
+          "corpo": {
+            "erro": "pedido_nao_encontrado"
+          },
+          "quando": "pedido inexistente"
+        },
+        "409": {
+          "corpo": {
+            "erro": "pedido_ja_finalizado"
+          },
+          "quando": "pedido ja entregue (status terminal)"
+        }
+      }
+    },
+    {
+      "id": "listar_ativos",
+      "uc": "UC3",
+      "metodo": "GET",
+      "path": "/pedidos/ativos",
+      "respostas": {
+        "200": {
+          "corpo": [
+            "array dos pedidos com status recebido, preparo ou pronto, mais recentes primeiro"
+          ]
+        }
+      }
+    },
+    {
+      "id": "relatorio_diario",
+      "uc": "UC4",
+      "metodo": "GET",
+      "path": "/relatorios/diario",
+      "requisicao": {
+        "query": {
+          "data": "obrigatória — formato AAAA-MM-DD"
+        }
+      },
+      "respostas": {
+        "200": {
+          "corpo": {
+            "data": "2026-10-28",
+            "total_pedidos": 12,
+            "faturamento_centavos": 123400,
+            "ticket_medio_centavos": 10284
+          },
+          "regra": "considera pedidos RECEBIDOS na data (campo recebido_em) e NAO cancelados; ticket_medio_centavos = faturamento / total_pedidos, arredondando 0,5 para cima"
+        },
+        "422": {
+          "corpo": {
+            "erro": "data_invalida"
+          },
+          "quando": "data fora do formato AAAA-MM-DD"
+        }
+      }
+    },
+    {
+      "id": "cancelar_pedido",
+      "uc": "UC5",
+      "metodo": "POST",
+      "path": "/pedidos/{id}/cancelamento",
+      "descricao": "Cancela um pedido em status recebido (desistencia antes de ir pro forno) — some do relatorio diario.",
+      "respostas": {
+        "200": {
+          "corpo": {
+            "id": 1,
+            "status": "cancelado"
+          }
+        },
+        "404": {
+          "corpo": {
+            "erro": "pedido_nao_encontrado"
+          },
+          "quando": "pedido inexistente"
+        },
+        "409": {
+          "corpo": {
+            "erro": "pedido_nao_cancelavel"
+          },
+          "quando": "pedido em preparo, pronto ou entregue"
+        }
+      }
+    },
+    {
+      "id": "historico_cliente",
+      "uc": "UC6",
+      "metodo": "GET",
+      "path": "/pedidos",
+      "requisicao": {
+        "query": {
+          "cliente": "obrigatória — filtra o historico do cliente"
+        }
+      },
+      "descricao": "Historico completo de um cliente (qualquer status), mais recentes primeiro.",
+      "respostas": {
+        "200": {
+          "corpo": [
+            "array de pedidos do cliente (qualquer status), mais recentes primeiro — vazio se nunca pediu"
+          ]
+        },
+        "422": {
+          "corpo": {
+            "erro": "cliente_invalido"
+          },
+          "quando": "cliente ausente ou com menos de 2 caracteres"
+        }
+      }
+    },
+    {
+      "id": "desconto_promo",
+      "uc": "UC7",
+      "regra_de_valor": true,
+      "descricao": "DESCONTO_PROMO_PERCENTUAL incide sobre o subtotal das PIZZAS (nunca sobre a taxa de entrega), com arredondamento PARA CIMA em centavos (ceil): desconto = ceil(subtotal x pct / 100). DESCONTO = 0 -> desconto_centavos sempre 0.",
+      "exemplos": [
+        "subtotal 10000, DESCONTO=10 -> 1000 centavos",
+        "subtotal 9999, DESCONTO=10 -> ceil(999,9) = 1000 centavos",
+        "subtotal 333, DESCONTO=10 -> ceil(33,3) = 34 centavos",
+        "subtotal 5000, DESCONTO=0 -> 0 centavos (e a taxa de entrega entra integral no total)"
+      ]
+    },
+    {
+      "id": "pedido_aberto_cliente",
+      "uc": "UC8",
+      "regra_de_negocio": true,
+      "descricao": "Um cliente so pode ter UM pedido ativo (status recebido, preparo ou pronto) por vez.",
+      "respostas": {
+        "409": {
+          "corpo": {
+            "erro": "pedido_em_aberto"
+          },
+          "quando": "POST /pedidos para cliente que ja tem pedido ativo"
+        }
+      },
+      "observacao": "Apos entregue ou cancelado, o cliente pode pedir novamente."
+    }
+  ],
+  "exemplo_inconsistente": {
+    "aviso": "TRAMPA T7 — o 'exemplo de um relatorio antigo' abaixo CONTRADIZ o contrato de proposito. Confie no contrato, nao no exemplo.",
+    "conteudo": "GET /relatorios/diario?data=2026-10-28 → {\"data\": \"2026-10-28\", \"faturamento\": 123.40}",
+    "por_que_esta_errado": "O contrato exige faturamento_centavos inteiro (ex.: 123400), nunca ponto flutuante ('faturamento': 123.40), alem de total_pedidos e ticket_medio_centavos; e o exemplo omite que pedidos cancelados nao entram no relatorio."
+  },
+  "entregavel": {
+    "descricao": "Especificacoes em .md (NUNCA codigo), na raiz do repositorio (docs/ tambem e lido): constitution.md, spec.md, plan.md, tests.md, tasks.md — nomes e quantidade livres, pontuam os 5 melhores",
+    "criterio_E_checklist": {
+      "constitution.md": ">= 1 regra operacional concreta",
+      "spec.md": ">= 1 criterio de aceite mensuravel por UC",
+      "plan.md": ">= 1 decisao tecnica com justificativa",
+      "tests.md": ">= 1 caso de borda por regra de negocio",
+      "tasks.md": ">= 3 tarefas decompostas",
+      "outro .md": "headers + especificacao concreta que instrua geracao de codigo"
+    },
+    "regra_fatal": "Snippets de codigo de ate 20 linhas sao aceitos nos .md para elucidar o agente; bloco maior que 20 linhas = implementacao colada = prova ZERADA (verificado automaticamente no CI, job md)"
+  },
+  "regras_gerais": [
+    "Precedencia de erros: validacao de formato (422) vem ANTES de regras de negocio (409) — payload malformado nunca dispara conflito de estado"
+  ]
+}
