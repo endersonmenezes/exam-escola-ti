@@ -1,0 +1,28 @@
+{
+  "track": "track-05-recuperacao-individual",
+  "lockfile_version": 1,
+  "workflows": {
+    "auto-correcao.trampas": true,
+    "auto-correcao.estrutura": true,
+    "auto-correcao.testes-publicos": false,
+    "auto-correcao.testes-escondidos": false,
+    "auto-correcao.md": false,
+    "auto-correcao.compila": false,
+    "auto-correcao.sobe": false,
+    "auto-correcao.smoke": false,
+    "auto-correcao.metodo": false,
+    "auto-correcao.nota": true
+  },
+  "suites": {
+    "escondidos": {
+      "via": "CORRECAO_REPO",
+      "pontos": 90,
+      "observacao": "Nao ha suite executavel escondida nesta track. Os criterios A-G (90 pontos) sao corrigidos pelo docente com rubrica analitica, execucao da aplicacao e testes, revisao do historico e evidencias. O job CI permanece desligado."
+    }
+  },
+  "recursos": {
+    "frontend": false,
+    "docker": true,
+    "variante": true
+  }
+}

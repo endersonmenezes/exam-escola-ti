@@ -8,6 +8,18 @@ Todas as mudanças notáveis do sistema de provas da Escola de TI
 > em prova real. As turmas que exercitaram o sistema até aqui usaram-no como
 > aula teste (prova dummy "Hello World").
 
+## [1.6.0] — 2026-11-24
+
+### Adicionado
+
+- **Recuperação individual/2026 — `exams/2026/track-05-recuperacao-individual`**:
+  avaliação híbrida com janela de 7 dias (10.080 minutos), pesquisa aplicada,
+  SDD/OpenAPI/ADRs, TDD com ciclos red–green–refactor, quatro casos de
+  debugging, CRUD persistente, ViaCEP e webhook simulados, idempotência,
+  concorrência, GitHub, Containerfile e README. A nota do CI é parcial
+  (Containerfile 5 + README 5); A–G (90) são corrigidos pelo docente e a
+  entrevista presencial separada compõe 50% da nota final.
+
 ## [1.5.0] — 2026-10-28
 
 ### Adicionado

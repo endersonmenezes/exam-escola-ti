@@ -1,0 +1,23 @@
+{
+  "nota_max": 100,
+  "extras_max": 0,
+  "janela_minutos": 10080,
+  "criterios": {
+    "A_sdd_arquitetura": 15,
+    "B_crud_regras_negocio": 20,
+    "C_tdd_testes": 15,
+    "D_debugging": 10,
+    "E_integracoes_resiliencia": 15,
+    "F_github_sdlc": 10,
+    "G_pesquisa_aplicada": 5,
+    "dockerfile": 5,
+    "readme": 5
+  },
+  "composicao_avaliacao": {
+    "prova_pratica_peso": 0.5,
+    "entrevista_presencial_peso": 0.5,
+    "formula": "nota_final = round_half_up(0.5 * nota_prova_pratica + 0.5 * nota_entrevista)"
+  },
+  "nota_final": "A prova pratica vale 0-100. O CI cobre apenas integridade, Containerfile (5) e README (5); os demais 90 pontos sao apurados pelo docente. A entrevista presencial vale separadamente 0-100. A nota final da recuperacao usa 50% de cada etapa.",
+  "aviso": "Janela de 10080 minutos (7 dias). Consulta permitida com rastreabilidade. IA como agente, alteracao de caminhos protegidos ou criacao de workflows em .github zera a prova. O HEAD final deve ter testes verdes; commits red intermediarios documentam TDD. Testes de integracao devem usar mocks locais e nunca depender de internet."
+}

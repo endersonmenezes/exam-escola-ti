@@ -1,0 +1,555 @@
+{
+  "meta": {
+    "titulo": "Recuperação Individual · Track 05 — Conecta Comunidade",
+    "versao": "2026",
+    "track": "track-05-recuperacao-individual",
+    "janela": "7 dias corridos (10080 minutos)",
+    "modalidade": "Individual, online, consulta permitida com rastreabilidade",
+    "aviso": "O ENUNCIADO.md contem os requisitos completos, as missoes de pesquisa, os casos de debugging, os criterios de aceite e as instrucoes de entrega. Este contrato resume a interface obrigatoria e nao reduz o escopo do enunciado.",
+    "correcao": "Rubrica analitica docente, execucao dos testes e da aplicacao, revisao do historico e entrevista presencial. Nao ha suite escondida executavel."
+  },
+  "variante": {
+    "descricao": "Os valores derivam do nome do repositorio e sao entregues em variante/params.json. O aluno apenas le o arquivo; a correcao recomputa os valores.",
+    "extras": {
+      "PORTA_API": {
+        "base": 8101,
+        "passo": 1,
+        "faixa": 10
+      },
+      "LIMITE_PAGINACAO": {
+        "opcoes": [
+          10,
+          15,
+          20
+        ]
+      },
+      "HORAS_LIMITE_ATIVIDADE": {
+        "opcoes": [
+          8,
+          12,
+          16
+        ]
+      },
+      "TENTATIVAS_WEBHOOK": {
+        "opcoes": [
+          3,
+          4,
+          5
+        ]
+      }
+    },
+    "uso": {
+      "PORTA_API": "Porta do host na correcao (8101..8110); a aplicacao escuta na 8080 dentro do container",
+      "LIMITE_PAGINACAO": "Tamanho padrao de pagina quando o query param tamanho nao e informado (10, 15 ou 20)",
+      "HORAS_LIMITE_ATIVIDADE": "Quantidade maxima de horas por atividade (8, 12 ou 16); na API o limite e esse valor multiplicado por 100",
+      "TENTATIVAS_WEBHOOK": "Quantidade maxima de tentativas de entrega, incluindo a primeira (3, 4 ou 5)"
+    }
+  },
+  "servidor": {
+    "base_url_suite": "http://localhost:{PORTA_API}",
+    "porta_interna": 8080,
+    "persistencia": "Banco relacional; SQLite aceito; dados em /data quando executado com volume",
+    "content_type": "application/json",
+    "error_content_type": "application/problem+json",
+    "internet_nos_testes": false
+  },
+  "convencoes": {
+    "ids": "Inteiros positivos gerados pela aplicacao",
+    "timestamps": "ISO-8601 com offset explicito; instantes persistidos em UTC",
+    "horas": "Inteiros em centesimos; atividades multiplos de 25; 100 = 1 hora",
+    "percentual": "String decimal com duas casas, arredondamento half-up",
+    "correlation_id": "Toda resposta contem X-Correlation-ID; erros e logs carregam o mesmo valor",
+    "paginacao": {
+      "query": {
+        "pagina": "Inteiro >= 1, padrao 1",
+        "tamanho": "Inteiro 1..50, padrao LIMITE_PAGINACAO"
+      },
+      "envelope": {
+        "dados": [],
+        "paginacao": {
+          "pagina": 1,
+          "tamanho": 10,
+          "total": 0,
+          "total_paginas": 0
+        }
+      }
+    },
+    "problem_details_membros_obrigatorios": [
+      "type",
+      "title",
+      "status",
+      "detail",
+      "instance",
+      "code",
+      "correlation_id"
+    ]
+  },
+  "recursos": {
+    "saude": {
+      "endpoints": [
+        {
+          "metodo": "GET",
+          "path": "/saude",
+          "sucesso": 200,
+          "corpo": {
+            "status": "ok",
+            "versao": "1.0.0"
+          },
+          "regras": "Nao consulta ViaCEP nem webhook; usado pelo healthcheck"
+        }
+      ]
+    },
+    "parceiro": {
+      "campos": {
+        "nome": "String 3..100, nao vazia apos trim",
+        "email": "Email valido, unico, normalizado para minusculas",
+        "cep": "Exatamente 8 digitos",
+        "complemento": "Opcional, ate 120 caracteres",
+        "ativo": "Boolean, padrao true",
+        "endereco": "logradouro, bairro, cidade e uf retornados pela integracao de CEP"
+      },
+      "endpoints": [
+        {
+          "metodo": "POST",
+          "path": "/parceiros",
+          "sucesso": 201,
+          "regras": "Consulta ViaCEP antes de persistir"
+        },
+        {
+          "metodo": "GET",
+          "path": "/parceiros",
+          "sucesso": 200,
+          "query": "pagina, tamanho, nome (parcial, case-insensitive), ativo (true|false)"
+        },
+        {
+          "metodo": "GET",
+          "path": "/parceiros/{id}",
+          "sucesso": 200
+        },
+        {
+          "metodo": "PUT",
+          "path": "/parceiros/{id}",
+          "sucesso": 200,
+          "regras": "PUT exige todos os campos editaveis nome, email, CEP e complemento; ausencia => 422 validacao_falhou; nova consulta se CEP mudar"
+        },
+        {
+          "metodo": "PATCH",
+          "path": "/parceiros/{id}",
+          "sucesso": 200,
+          "body": {
+            "ativo": true
+          },
+          "regras": "Aceita somente o campo ativo; ausencia ou campos extras => 422 validacao_falhou"
+        },
+        {
+          "metodo": "DELETE",
+          "path": "/parceiros/{id}",
+          "sucesso": 204
+        }
+      ]
+    },
+    "projeto": {
+      "campos": {
+        "titulo": "String 3..120",
+        "descricao": "String 10..2000",
+        "parceiro_id": "Parceiro existente",
+        "horas_previstas_centesimos": "Inteiro 100..1000000",
+        "status": "rascunho|ativo|encerrado; inicial rascunho"
+      },
+      "endpoints": [
+        {
+          "metodo": "POST",
+          "path": "/projetos",
+          "sucesso": 201,
+          "headers_obrigatorios": [
+            "Idempotency-Key"
+          ]
+        },
+        {
+          "metodo": "GET",
+          "path": "/projetos",
+          "sucesso": 200,
+          "query": "pagina, tamanho, status, parceiro_id"
+        },
+        {
+          "metodo": "GET",
+          "path": "/projetos/{id}",
+          "sucesso": 200
+        },
+        {
+          "metodo": "PUT",
+          "path": "/projetos/{id}",
+          "sucesso": 200,
+          "regras": "Somente rascunho"
+        },
+        {
+          "metodo": "PATCH",
+          "path": "/projetos/{id}/status",
+          "sucesso": 200,
+          "body": {
+            "status": "ativo|encerrado"
+          }
+        },
+        {
+          "metodo": "DELETE",
+          "path": "/projetos/{id}",
+          "sucesso": 204,
+          "regras": "Somente rascunho sem atividades"
+        },
+        {
+          "metodo": "GET",
+          "path": "/projetos/{id}/relatorio",
+          "sucesso": 200
+        },
+        {
+          "metodo": "POST",
+          "path": "/projetos/{id}/publicacao",
+          "sucesso": 202,
+          "headers_obrigatorios": [
+            "Idempotency-Key"
+          ],
+          "regras": "Somente ativo; persiste evento na outbox"
+        }
+      ],
+      "relatorio": {
+        "campos": [
+          "projeto_id",
+          "status",
+          "atividades_planejadas",
+          "atividades_concluidas",
+          "atividades_canceladas",
+          "horas_previstas_centesimos",
+          "horas_realizadas_centesimos",
+          "percentual_conclusao"
+        ],
+        "formula": "previstas = planejadas + concluidas; realizadas = concluidas; percentual = realizadas / previstas * 100, duas casas half-up; previstas zero => 0.00"
+      }
+    },
+    "atividade": {
+      "campos": {
+        "projeto_id": "Projeto existente em rascunho ou ativo",
+        "titulo": "String 3..120",
+        "inicio": "ISO-8601 com offset",
+        "voluntario": "Nome ficticio 3..100",
+        "horas_previstas_centesimos": "Multiplo de 25, entre 25 e HORAS_LIMITE_ATIVIDADE*100",
+        "horas_realizadas_centesimos": "Obrigatorio ao concluir; mesmas regras de limite",
+        "status": "planejada|concluida|cancelada; inicial planejada"
+      },
+      "endpoints": [
+        {
+          "metodo": "POST",
+          "path": "/projetos/{id}/atividades",
+          "sucesso": 201,
+          "headers_obrigatorios": [
+            "Idempotency-Key"
+          ]
+        },
+        {
+          "metodo": "GET",
+          "path": "/atividades",
+          "sucesso": 200,
+          "query": "pagina, tamanho, projeto_id, status, de, ate; ordenacao inicio ASC, id ASC"
+        },
+        {
+          "metodo": "GET",
+          "path": "/atividades/{id}",
+          "sucesso": 200
+        },
+        {
+          "metodo": "PUT",
+          "path": "/atividades/{id}",
+          "sucesso": 200,
+          "regras": "Somente planejada"
+        },
+        {
+          "metodo": "PATCH",
+          "path": "/atividades/{id}/status",
+          "sucesso": 200,
+          "body": "concluir: status=concluida + horas_realizadas_centesimos; cancelar: status=cancelada"
+        },
+        {
+          "metodo": "DELETE",
+          "path": "/atividades/{id}",
+          "sucesso": 204,
+          "regras": "Somente planejada"
+        }
+      ]
+    }
+  },
+  "regras_negocio": [
+    {
+      "id": "RN-P01",
+      "regra": "Email duplicado => 409 email_em_uso, inclusive sob concorrencia"
+    },
+    {
+      "id": "RN-P02",
+      "regra": "CEP inexistente/invalido no provedor => 422 cep_invalido"
+    },
+    {
+      "id": "RN-P03",
+      "regra": "Timeout, rede, JSON invalido ou 5xx persistente da ViaCEP => 503 viacep_indisponivel"
+    },
+    {
+      "id": "RN-P04",
+      "regra": "Parceiro com qualquer projeto nao pode ser excluido => 409 parceiro_com_projetos"
+    },
+    {
+      "id": "RN-P05",
+      "regra": "Parceiro com projeto ativo nao pode ser desativado => 409 parceiro_com_projetos_ativos"
+    },
+    {
+      "id": "RN-P06",
+      "regra": "Projeto rascunho ou encerrado nao impede desativacao do parceiro"
+    },
+    {
+      "id": "RN-P07",
+      "regra": "Falha na consulta de CEP nao persiste criacao nem atualizacao parcial"
+    },
+    {
+      "id": "RN-J01",
+      "regra": "Parceiro inexistente => 404 parceiro_nao_encontrado"
+    },
+    {
+      "id": "RN-J02",
+      "regra": "Parceiro inativo nao aceita novo projeto => 409 parceiro_inativo"
+    },
+    {
+      "id": "RN-J03",
+      "regra": "Somente rascunho -> ativo -> encerrado; demais transicoes => 409 transicao_status_invalida"
+    },
+    {
+      "id": "RN-J04",
+      "regra": "Ativacao exige parceiro ativo e atividade planejada; senao 409 projeto_sem_atividade_planejada"
+    },
+    {
+      "id": "RN-J05",
+      "regra": "Encerramento exige ausencia de atividades planejadas; senao 409 projeto_com_atividades_planejadas"
+    },
+    {
+      "id": "RN-J06",
+      "regra": "Projeto ativo/encerrado nao aceita PUT nem DELETE => 409 projeto_nao_editavel"
+    },
+    {
+      "id": "RN-J07",
+      "regra": "Rascunho com atividades nao pode ser excluido => 409 projeto_com_atividades"
+    },
+    {
+      "id": "RN-J08",
+      "regra": "Projeto encerrado e terminal para edicao, atividades e publicacao"
+    },
+    {
+      "id": "RN-A01",
+      "regra": "Atividades so sao criadas em projeto rascunho ou ativo"
+    },
+    {
+      "id": "RN-A02",
+      "regra": "Concluir exige horas_realizadas_centesimos"
+    },
+    {
+      "id": "RN-A03",
+      "regra": "Cancelar nao exige horas realizadas"
+    },
+    {
+      "id": "RN-A04",
+      "regra": "Somente planejada -> concluida|cancelada; terminal imutavel => 409 atividade_finalizada"
+    },
+    {
+      "id": "RN-A05",
+      "regra": "Atividade concluida nao pode ser cancelada nem editada"
+    },
+    {
+      "id": "RN-A06",
+      "regra": "Atividade cancelada nao entra nas horas previstas nem realizadas do relatorio"
+    },
+    {
+      "id": "RN-A07",
+      "regra": "Horas realizadas nao excedem HORAS_LIMITE_ATIVIDADE"
+    }
+  ],
+  "integracoes": {
+    "viacep": {
+      "url": "GET {VIACEP_BASE_URL}/{cep}/json/",
+      "configuracao": [
+        "VIACEP_BASE_URL",
+        "HTTP_TIMEOUT_MS"
+      ],
+      "timeout_obrigatorio": true,
+      "retry_maximo_apos_primeira": 1,
+      "retry_apenas": [
+        "rede",
+        "timeout",
+        "HTTP 5xx"
+      ],
+      "sem_internet_nos_testes": true,
+      "cenarios_mock": [
+        "sucesso",
+        "CEP inexistente",
+        "JSON invalido",
+        "timeout",
+        "falha de conexao",
+        "500 seguido de sucesso",
+        "500 persistente",
+        "atualizacao de CEP com falha sem mudar dados anteriores"
+      ]
+    },
+    "idempotencia": {
+      "rotas": [
+        "POST /projetos",
+        "POST /projetos/{id}/atividades",
+        "POST /projetos/{id}/publicacao"
+      ],
+      "header": "Idempotency-Key",
+      "formato": "String 8..100 caracteres",
+      "retencao_minima_horas": 24,
+      "mesmo_payload": "Replay do status e corpo originais, sem novo registro/evento",
+      "payload_diferente": "409 idempotencia_conflito",
+      "escopo": "Rota + chave",
+      "payload_comparacao": "Hash canonico documentado",
+      "concorrencia": "Constraint/transacao garante um unico registro com mesma chave/payload"
+    },
+    "webhook": {
+      "configuracao": [
+        "WEBHOOK_URL",
+        "WEBHOOK_SECRET",
+        "WEBHOOK_TIMEOUT_MS",
+        "TENTATIVAS_WEBHOOK"
+      ],
+      "evento_tipo": "projeto.publicado",
+      "headers": [
+        "Content-Type: application/json",
+        "X-Event-ID",
+        "X-Idempotency-Key",
+        "X-Webhook-Timestamp",
+        "X-Webhook-Signature: sha256=<hmac_hex>"
+      ],
+      "assinatura": "HMAC-SHA256 sobre o corpo bruto",
+      "estados": [
+        "pendente",
+        "enviado",
+        "falhou"
+      ],
+      "sucesso": "Somente HTTP 2xx",
+      "retry": "Somente rede/timeout, 429 e 5xx; demais 4xx nao repetem",
+      "backoff": "Exponencial com jitter e limites documentados; Retry-After em segundos respeitado com teto",
+      "consulta": "Sem segredo, assinatura ou erro sensivel",
+      "consulta_endpoint": {
+        "metodo": "GET",
+        "path": "/integracoes/eventos/{evento_id}",
+        "sucesso": 200,
+        "campos": "ID, projeto, status, tentativas, timestamps e proxima_tentativa_em quando aplicavel"
+      },
+      "testes": [
+        "assinatura valida e invalida",
+        "corpo e headers",
+        "sucesso inicial",
+        "500 depois 200",
+        "429 com Retry-After",
+        "400 sem retry",
+        "timeout",
+        "esgotamento",
+        "reinicio com pendente",
+        "replay sem duplicar"
+      ]
+    }
+  },
+  "debugging": [
+    {
+      "id": "D01",
+      "tema": "Arredondamento half-up de horas",
+      "entrega": "Teste que reproduz, causa raiz, correcao, bordas e regressao"
+    },
+    {
+      "id": "D02",
+      "tema": "Off-by-one na paginacao",
+      "entrega": "Teste que reproduz, causa raiz, correcao, parametros invalidos e pagina alem do fim"
+    },
+    {
+      "id": "D03",
+      "tema": "Retry indiscriminado, timeout ausente e excecao muda",
+      "entrega": "Testes com cliente simulado para 400, 429, 500, timeout e sucesso apos falha"
+    },
+    {
+      "id": "D04",
+      "tema": "Check-then-act sob concorrencia",
+      "entrega": "Teste concorrente deterministico, protecao da operacao, adjacencia e explicacao sobre constraint no banco"
+    }
+  ],
+  "qualidade": {
+    "tdd": {
+      "ciclos_minimos": 3,
+      "temas": [
+        "CRUD/transicao",
+        "integracao/idempotencia",
+        "relatorio/concorrencia"
+      ],
+      "prefixos": [
+        "test(red):",
+        "feat(green): ou fix(green):",
+        "refactor:"
+      ],
+      "head_final_verde": true
+    },
+    "testes": {
+      "minimo_casos": 30,
+      "minimo_integracao_http_banco": 8,
+      "minimo_negativos_bordas": 10,
+      "internet": false
+    },
+    "github": {
+      "issues_minimas": 8,
+      "pull_requests_integrados_minimos": 6,
+      "commits_significativos_minimos": 18,
+      "dias_diferentes_minimos": 3,
+      "workflows_personalizados_permitidos": false,
+      "caminho_protegido": ".github/"
+    },
+    "container": {
+      "arquivo": "Containerfile",
+      "porta_interna": 8080,
+      "volume": "/data",
+      "healthcheck": true,
+      "non_root_quando_aplicavel": true,
+      "dockerignore_obrigatorio": true
+    }
+  },
+  "pesquisa": {
+    "missoes_disponiveis": 14,
+    "missoes_minimas": 12,
+    "fontes_distintas_minimas": 15,
+    "fontes_primarias_minimas": 8,
+    "missoes_com_duas_fontes_minimas": 6,
+    "aplicacoes_localizaveis_minimas": 10,
+    "registro": "docs/pesquisa.md + FONTES.md"
+  },
+  "exemplo_inconsistente": {
+    "aviso": "Exemplo legado que contradiz o contrato; nao copiar",
+    "conteudo": {
+      "horas_previstas": 1.3333333333,
+      "percentual": 45.835,
+      "erro": "Projeto inválido"
+    }
+  },
+  "entregavel": {
+    "aplicacao": "src/",
+    "testes": "tests/app/",
+    "debug": "debug/ + debug/diagnostico.md",
+    "sdd": [
+      "docs/constitution.md",
+      "docs/spec.md",
+      "docs/plan.md",
+      "docs/tasks.md",
+      "docs/tests.md",
+      "docs/openapi.yaml",
+      "docs/adr/ (minimo 5 ADRs)",
+      "docs/pesquisa.md"
+    ],
+    "evidencias": "evidencias/tdd/ + evidencias/revisao/checklist-final.md",
+    "container": "Containerfile + .dockerignore",
+    "documentacao": "README.md reescrito para a solucao + FONTES.md preenchido"
+  },
+  "composicao_nota": {
+    "prova_pratica": "0..100, peso 0.5",
+    "entrevista": "0..100, peso 0.5",
+    "formula": "0.5 * prova + 0.5 * entrevista"
+  }
+}
